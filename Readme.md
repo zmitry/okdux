@@ -28,15 +28,18 @@ export const machinesRootState = createState({
 });
 ```
 connect state 
-```
-const reducer = combineReducers({
+```js
+const rootReducer = combineReducers({
   ...reducerMapObj,
   machines: machinesRootState.buildReducer("machines"),
   actions: actionStateReducer
 });
+// or
+const rootState = createState({ machines, ...otherStuff }),
+const rootReducer = rootState.buildReducer();
 ```
 use state
-```
+```js
 import {  machines, ui  } from ‘./state’
 
 const mapStateToProps = (state) => {
