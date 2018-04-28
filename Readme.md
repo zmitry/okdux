@@ -43,9 +43,9 @@ use state
 import {  machines, ui  } from ‘./state’
 
 const mapStateToProps = (state) => {
-const machinesState = machines.select(state);
-const machinesUiState = ui.select(state);
-return {  first: machinesState[0], activeMachine: machineUiState.activeMachine  }  
+  const machinesState = machines.select(state);
+  const machinesUiState = ui.select(state);
+  return {  first: machinesState[0], activeMachine: machineUiState.activeMachine  }  
 } 
 ```
 
