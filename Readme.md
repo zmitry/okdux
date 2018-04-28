@@ -1,5 +1,5 @@
 create state
-```
+```js
 
 export const entities = createState({})
   .on(events.replace, (_, payload) => payload)
