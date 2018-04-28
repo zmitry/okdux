@@ -1,3 +1,8 @@
+# install
+```
+yarn add stateducer
+```
+
 create state
 ```js
 
