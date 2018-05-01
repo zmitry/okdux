@@ -6,6 +6,17 @@ yarn add stateducer
 create state
 ```js
 
+
+const events = createActions(
+  {
+    update: build.plain,
+    replace: build.plain,
+    setSelectedMachines: build.plain,
+    create: build.plain
+  },
+  "machines"
+);
+
 export const entities = createState({})
   .on(events.replace, (_, payload) => payload)
   .on(events.create, reducer.set)
