@@ -13,7 +13,7 @@ function getProp(object, keys) {
 }
 
 function isReducerBuilder(builder) {
-  return typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
+  return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
 }
 function traverseReducers(reducers, path) {
   for (let key in reducers) {
