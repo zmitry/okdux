@@ -60,6 +60,7 @@ function getDefaultReducer(initialState, path) {
 interface IReducerBuilder<T> {
   select<RootState>(rootState: RootState): T;
   buildReducer(path: string): <P>(state: T, action: any) => T;
+  mapState<R, P>(fn: (state: T, props: P) => R): (root: any) => R;
   handle(
     event: string | string[],
     handler: (state: T, payload: any, meta: any) => T | void
@@ -79,7 +80,7 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
   [reducerPathSymbol] = "";
 
   constructor(public initialState: T) {}
-
+  //@ts-ignore
   on(action, handler) {
     if (action === undefined || action === null) {
       throw new Error("action should be an action, got " + action);
@@ -87,6 +88,7 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
     this.handlers[getType(action)] = handler;
     return this;
   }
+  //@ts-ignore
   handle(type, handler) {
     if (Array.isArray(type)) {
       type.forEach(t => this.handle(t, handler));
@@ -96,13 +98,17 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
     return this;
   }
 
-  select<R>(rs: R) {
+  select = <R>(rs: R) => {
     if (this[reducerPathSymbol]) {
       return getProp(rs, this[reducerPathSymbol]);
     } else {
       return rs;
     }
-  }
+  };
+  // @ts-ignore
+  mapState = fn => {
+    return (state, props) => fn(this.select(state), props, state);
+  };
   buildReducer(path: string) {
     if (path) {
       this[reducerPathSymbol] = path;
@@ -135,9 +141,5 @@ function createState<T>(initialState: T): IReducerBuilder<R<T>> {
   // @ts-ignore
   return new ReducerBuilder<T>(initialState);
 }
-
-const a = createState("");
-const b = createState("");
-const c = createState({ a, b });
 
 export { createState, R, Unpacked, Box, IReducerBuilder };
