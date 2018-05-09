@@ -1,5 +1,6 @@
 import { combineReducers } from "redux";
 import { getType, PACreator, FSACreator, Box, FSA } from "typesafe-actions";
+import { PlainAction } from "./createAction";
 
 const reducerPathSymbol = Symbol();
 
@@ -24,12 +25,18 @@ function traverseReducers(reducers, path) {
   }
 }
 
+const atomReducer = (defaultV, type) => (state = defaultV, action) =>
+  action && action.type === type ? action.payload : state;
+
 const identityWithDefault = d => (s = d) => s;
 function pruneInitialState(initialState) {
   return Object.keys(initialState).reduce(
     (acc, el) => {
       if (isReducerBuilder(initialState[el])) {
         acc.reducers[el] = initialState[el].buildReducer();
+      } else if (initialState[el] && initialState[el].getType) {
+        const t = initialState[el].getType();
+        acc.reducers[el] = atomReducer(initialState[el].defaultValue, t);
       } else {
         acc.defaultState[el] = initialState[el];
         acc.reducers[el] = identityWithDefault(initialState[el]);
@@ -71,7 +78,7 @@ interface IReducerBuilder<T> {
   ): IReducerBuilder<T>;
 }
 
-type Unpacked<T> = T extends IReducerBuilder<infer U> ? U : T;
+type Unpacked<T> = T extends IReducerBuilder<infer U> ? U : T extends PlainAction<infer P> ? P : T;
 
 type R<T> = { [P in keyof T]: Unpacked<T[P]> };
 
@@ -109,6 +116,10 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
   mapState = fn => {
     return (state, props) => fn(this.select(state), props, state);
   };
+  private _reducer;
+  get reducer() {
+    return this._reducer;
+  }
   buildReducer(path: string) {
     if (path) {
       this[reducerPathSymbol] = path;
@@ -117,7 +128,7 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
       this.initialState,
       this[reducerPathSymbol] || path
     );
-    return <P>(state: T = defaultState, action: FSA<string, P, any>): T => {
+    const reducer = <P>(state: T = defaultState, action: FSA<string, P, any>): T => {
       state = nestedReducer(state, action);
 
       if (!action) {
@@ -131,6 +142,8 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
       }
       return state;
     };
+    this._reducer = reducer;
+    return reducer;
   }
 }
 
