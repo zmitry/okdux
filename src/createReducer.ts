@@ -1,6 +1,5 @@
 import { combineReducers } from "redux";
-import { getType, PACreator, FSACreator, Box, FSA } from "typesafe-actions";
-import { PlainAction } from "./createAction";
+import { StandardAction, StandardActionPayload } from "./createAction";
 
 const reducerPathSymbol = Symbol();
 
@@ -72,13 +71,12 @@ interface IReducerBuilder<T> {
     event: string | string[],
     handler: (state: T, payload: any, meta: any) => T | void
   ): IReducerBuilder<T>;
-  on<E extends Box<any>, M extends Box<any>>(
-    event: PACreator<string, E> | FSACreator<string, E, M>,
-    handler: (state: T, payload: E) => T
-  ): IReducerBuilder<T>;
+  on<E>(event: StandardAction<E>, handler: (state: T, payload: E) => T): IReducerBuilder<T>;
 }
 
-type Unpacked<T> = T extends IReducerBuilder<infer U> ? U : T extends PlainAction<infer P> ? P : T;
+type Unpacked<T> = T extends IReducerBuilder<infer U>
+  ? U
+  : T extends StandardAction<infer P> ? P : T;
 
 type R<T> = { [P in keyof T]: Unpacked<T[P]> };
 
@@ -89,10 +87,10 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
   constructor(public initialState: T) {}
   //@ts-ignore
   on(action, handler) {
-    if (action === undefined || action === null) {
+    if (action === undefined || action === null || !action.getType) {
       throw new Error("action should be an action, got " + action);
     }
-    this.handlers[getType(action)] = handler;
+    this.handlers[action.getType()] = handler;
     return this;
   }
   //@ts-ignore
@@ -128,17 +126,17 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
       this.initialState,
       this[reducerPathSymbol] || path
     );
-    const reducer = <P>(state: T = defaultState, action: FSA<string, P, any>): T => {
+    const reducer = <P>(state: T = defaultState, action: StandardActionPayload<P>): T => {
       state = nestedReducer(state, action);
 
       if (!action) {
         return state;
       }
 
-      const { type, payload, meta } = action;
+      const { type, payload } = action;
       if (this.handlers[type]) {
         const handler = this.handlers[type];
-        state = handler(state, payload, meta);
+        state = handler(state, payload, action);
       }
       return state;
     };
@@ -155,4 +153,4 @@ function createState<T>(initialState: T): IReducerBuilder<R<T>> {
   return new ReducerBuilder<T>(initialState);
 }
 
-export { createState, R, Unpacked, Box, IReducerBuilder };
+export { createState, R, Unpacked, IReducerBuilder };

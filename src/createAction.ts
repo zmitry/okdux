@@ -1,29 +1,49 @@
-import { buildAction, PACreator, AsyncCreator, EmptyOrPayload, Box } from "typesafe-actions";
+export type StandardActionPayload<T> = { type: string; payload: T };
 
-const createAction = <T>(name: string) => buildAction(name).payload<T>();
+export type StandardAction<T> = (payload: T) => { type: string; payload: T };
+function createAction<T>(type: string): StandardAction<T> {
+  const action = (payload: T) => ({ type, payload });
+  const getType = () => type;
+  return Object.assign(action, { getType });
+}
 
-export type PlainAction<T> = PACreator<string, T> & { defaultValue: T };
+export type AsyncActions<A, B, C> = {
+  request: StandardAction<A>;
+  success: StandardAction<B>;
+  failure: StandardAction<C>;
+};
+
+function createAsyncAction<A, B, C>(name: string): AsyncActions<A, B, C> {
+  return {
+    request: createAction(name + "_REQUEST"),
+    success: createAction(name + "_SUCCESS"),
+    failure: createAction(name + "_FAILURE")
+  };
+}
+
 const build = {
-  plain: name => {
-    return buildAction(name).payload();
+  plain: createAction,
+  action<T>(): (name: string) => StandardAction<T> {
+    // @ts-ignore
+    return createAction(name);
   },
-  mutator: <T>(defaultValue: T) => (name: string): PlainAction<T> => {
+  mutator: <T>(defaultValue: T) => (name: string): StandardAction<T> => {
     const action: any = (data = defaultValue) => ({ type: name, payload: data });
     action.defaultValue = defaultValue;
     action.getType = () => name;
     return action;
   },
-  async: (payload = d => d, meta = d => d) => name => {
-    return buildAction(name).async();
+  async: () => name => {
+    return createAsyncAction(name);
   }
 };
 
-export type Unpack<T> = T extends PlainAction<infer F> ? F : any;
+export type Unpack<T> = T extends StandardAction<infer F> ? F : any;
 
 function createActions<T extends { [M in keyof T]: T[M] }>(
   actions: T,
   prefix: string = "@"
-): { [M in keyof T]: PlainAction<Unpack<ReturnType<T[M]>>> } {
+): { [M in keyof T]: StandardAction<Unpack<ReturnType<T[M]>>> } {
   //@ts-ignore
   return Object.keys(actions).reduce((acc, el) => {
     acc[el] = actions[el](prefix + "/" + el);
@@ -34,12 +54,9 @@ function createActions<T extends { [M in keyof T]: T[M] }>(
 function createEffects<T>(
   actions: T,
   prefix: string = "@"
-): { [M in keyof T]: AsyncCreator<string, any, any, any> } {
+): { [M in keyof T]: AsyncActions<any, any, any> } {
   // @ts-ignore
-  return Object.keys(actions).reduce((acc, el) => {
-    acc[el] = actions[el](prefix + "/" + el);
-    return acc;
-  }, {});
+  return createActions(actions, prefix);
 }
 
-export { createAction, buildAction, build, createActions, createEffects };
+export { createAction, build, createActions, createEffects };
