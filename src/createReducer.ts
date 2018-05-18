@@ -3,6 +3,21 @@ import { StandardAction, StandardActionPayload } from "./createAction";
 
 const reducerPathSymbol = Symbol();
 
+let keys = [];
+let action;
+const changedMonitor = {
+  setChanged: (newAction, key) => {
+    if (action !== newAction) {
+      keys = [key];
+      action = newAction;
+    } else {
+      keys.push(key);
+    }
+    console.log(action, keys);
+  }
+};
+
+export const getKeys = () => keys;
 function getProp(object, keys) {
   keys = Array.isArray(keys) ? keys : keys.split(".");
   object = object[keys[0]];
@@ -136,7 +151,11 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
       const { type, payload } = action;
       if (this.handlers[type]) {
         const handler = this.handlers[type];
-        state = handler(state, payload, action);
+        let nextState = handler(state, payload, action);
+        if (nextState !== state) {
+          changedMonitor.setChanged(action, this[reducerPathSymbol]);
+        }
+        state = nextState;
       }
       return state;
     };
