@@ -1,6 +1,6 @@
 # install
 ```
-yarn add stateducer
+yarn add @kraken97/restate
 ```
 
 [![Edit j2y6q5o8w5](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/j2y6q5o8w5)
