@@ -2,6 +2,7 @@ import { combineReducers } from "redux";
 import { StandardAction, StandardActionPayload } from "./createAction";
 
 export const reducerPathSymbol = Symbol();
+export const storeSymbol = Symbol();
 
 let keys = [];
 let action;
@@ -29,11 +30,12 @@ function getProp(object, keys) {
 function isReducerBuilder(builder) {
   return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
 }
-function traverseReducers(reducers, path) {
+function traverseReducers(reducers, { path, ctx }) {
   for (let key in reducers) {
     const reducer = reducers[key];
     if (isReducerBuilder(reducer)) {
       reducer[reducerPathSymbol] = (path ? path + "." : "") + key;
+      ctx.addStore(reducer);
     }
   }
 }
@@ -61,11 +63,12 @@ function pruneInitialState(initialState) {
 }
 let identity = <T>(d: T, ..._: any[]): T => d;
 
-function getDefaultReducer(initialState, path) {
+function getDefaultReducer(initialState, { path, ctx }) {
   let defaultState = initialState;
   let nestedReducer = identity;
+
   if (typeof initialState === "object") {
-    traverseReducers(initialState, path);
+    traverseReducers(initialState, { path, ctx });
     const res = pruneInitialState(initialState);
 
     if (Object.keys(res.reducers).length !== 0) {
@@ -136,10 +139,14 @@ export class ReducerBuilder<T> implements IReducerBuilder<T> {
     if (path) {
       this[reducerPathSymbol] = path;
     }
-    const { defaultState, nestedReducer } = getDefaultReducer(
-      this.initialState,
-      this[reducerPathSymbol] || path
-    );
+
+    const { defaultState, nestedReducer } = getDefaultReducer(this.initialState, {
+      path: this[reducerPathSymbol] || path,
+      ctx: {
+        // @ts-ignore
+        addStore: this.addStore
+      }
+    });
     const reducer = <P>(state: T = defaultState, action: StandardActionPayload<P>): T => {
       state = nestedReducer(state, action);
 

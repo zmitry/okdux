@@ -1,8 +1,9 @@
 import { combineReducers } from 'redux';
+import React from 'react';
 import { get } from 'lodash';
-import { createSubscription } from 'create-subscription';
 
 var reducerPathSymbol = Symbol();
+var storeSymbol = Symbol();
 var keys = [];
 var action;
 var changedMonitor = {
@@ -28,11 +29,13 @@ function getProp(object, keys) {
 function isReducerBuilder(builder) {
     return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
 }
-function traverseReducers(reducers, path) {
+function traverseReducers(reducers, _a) {
+    var path = _a.path, ctx = _a.ctx;
     for (var key in reducers) {
         var reducer = reducers[key];
         if (isReducerBuilder(reducer)) {
             reducer[reducerPathSymbol] = (path ? path + "." : "") + key;
+            ctx.addStore(reducer);
         }
     }
 }
@@ -67,11 +70,12 @@ var identity = function (d) {
     }
     return d;
 };
-function getDefaultReducer(initialState, path) {
+function getDefaultReducer(initialState, _a) {
+    var path = _a.path, ctx = _a.ctx;
     var defaultState = initialState;
     var nestedReducer = identity;
     if (typeof initialState === "object") {
-        traverseReducers(initialState, path);
+        traverseReducers(initialState, { path: path, ctx: ctx });
         var res = pruneInitialState(initialState);
         if (Object.keys(res.reducers).length !== 0) {
             // @ts-ignore
@@ -131,7 +135,13 @@ var ReducerBuilder = /** @class */ (function () {
         if (path) {
             this[reducerPathSymbol] = path;
         }
-        var _a = getDefaultReducer(this.initialState, this[reducerPathSymbol] || path), defaultState = _a.defaultState, nestedReducer = _a.nestedReducer;
+        var _a = getDefaultReducer(this.initialState, {
+            path: this[reducerPathSymbol] || path,
+            ctx: {
+                // @ts-ignore
+                addStore: this.addStore
+            }
+        }), defaultState = _a.defaultState, nestedReducer = _a.nestedReducer;
         var reducer = function (state, action) {
             if (state === void 0) { state = defaultState; }
             state = nestedReducer(state, action);
@@ -156,6 +166,32 @@ var ReducerBuilder = /** @class */ (function () {
 }());
 _a = reducerPathSymbol;
 var _a;
+
+/*! *****************************************************************************
+Copyright (c) Microsoft Corporation. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at http://www.apache.org/licenses/LICENSE-2.0
+
+THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+MERCHANTABLITY OR NON-INFRINGEMENT.
+
+See the Apache Version 2.0 License for specific language governing permissions
+and limitations under the License.
+***************************************************************************** */
+/* global Reflect, Promise */
+
+var extendStatics = Object.setPrototypeOf ||
+    ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+    function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+
+function __extends(d, b) {
+    extendStatics(d, b);
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+}
 
 function shallowEq(a, b) {
     if (Object.is(a, b)) {
@@ -221,22 +257,27 @@ var Store = /** @class */ (function () {
         var _this = this;
         this.reactors = [];
         this.observers = [];
-        this.getValue = function () {
-            return _this.currentValue;
+        this.getState = function () {
+            return _this.currentState;
         };
-        this.react = function (fn) {
+        this.subscribe = function (fn) {
             _this.reactors.push(fn);
             return function () { return _this.reactors.filter(function (el) { return !fn; }); };
         };
-        this.Consumer = createSubscription({
-            getCurrentValue: this.getValue,
-            subscribe: this.react
-        });
+        this.getConsumer = function () {
+            if (!_this._consumer) {
+                _this._consumer = createConsumer(_this);
+            }
+            return _this._consumer;
+        };
         this.use = function (_a) {
             var subscribe = _a.subscribe, getState = _a.getState;
             subscribe(function () {
                 _this.set(getState(), getKeys());
             });
+        };
+        this.addStore = function (store) {
+            _this.observers.push(store);
         };
         this.map = function (fn) {
             var store = new Store(fn);
@@ -244,13 +285,11 @@ var Store = /** @class */ (function () {
             return store;
         };
         this.set = function (data, keys) {
-            if (!_this[reducerPathSymbol]) {
-                wrapKeys(keys, data);
-            }
+            wrapKeys(keys, data);
             var _a = checkKeyUsage(data, _this.selector), computedData = _a[0], deps = _a[1];
             var hasDeps = deps.length > 0;
-            if (hasDeps || !shallowEq(_this.currentValue, computedData)) {
-                _this.currentValue = computedData;
+            if (hasDeps || !shallowEq(_this.getState(), computedData)) {
+                _this.currentState = computedData;
                 _this.reactors.forEach(function (fn) { return fn(computedData); });
                 _this.observers.forEach(function (el) {
                     el.set(computedData, keys);
@@ -258,30 +297,41 @@ var Store = /** @class */ (function () {
             }
         };
         this.callReactors = function (data) {
-            var computedData = _this.selector(data);
-            _this.reactors.forEach(function (fn) { return fn(computedData); });
+            _this.reactors.forEach(function (fn) { return fn(_this.selector(data)); });
         };
         this.selector = fn;
     }
     return Store;
 }());
-// export function createConsumer(store) {
-//   return class Consumer extends React.Component {
-//     state = {};
-//     componentWillMount() {
-//       this.unsub = store.react(el => {
-//         this.setState({ state: el });
-//       });
-//     }
-//     componentWillUnount() {
-//       this.unsub();
-//     }
-//     render() {
-//       return this.props.children(this.state.state);
-//     }
-//   };
-// }
-// console.log("policiesStore: ", policiesStore.tree());
+function createConsumer(store) {
+    return _a = /** @class */ (function (_super) {
+            __extends(StoreConsumer, _super);
+            function StoreConsumer() {
+                var _this = _super !== null && _super.apply(this, arguments) || this;
+                _this.state = { currentState: store.getState() };
+                return _this;
+            }
+            StoreConsumer.prototype.componentDidMount = function () {
+                var _this = this;
+                var unsub = store.subscribe(function (state) {
+                    if (state !== _this.state.currentState) {
+                        // @ts-ignore
+                        _this.setState(function () { return ({ currentState: state }); });
+                    }
+                });
+                this.unsub = unsub;
+            };
+            StoreConsumer.prototype.componentWillUnmount = function () {
+                this.unsub();
+            };
+            StoreConsumer.prototype.render = function () {
+                // @ts-ignore
+                return this.props.children(this.state.currentState);
+            };
+            return StoreConsumer;
+        }(React.Component)), _a.displayName = (store.displayName || "Store") + ".Consumer", _a;
+    var _a;
+}
 
 function createAction(type) {
     var action = function (payload) { return ({ type: type, payload: payload }); };
@@ -339,4 +389,4 @@ function createState(initialState) {
     return res;
 }
 
-export { createState, reducerPathSymbol, getKeys, ReducerBuilder, createAction, build, createActions, createEffects, checkKeyUsage, wrapKeys, Store };
+export { createState, reducerPathSymbol, storeSymbol, getKeys, ReducerBuilder, createAction, build, createActions, createEffects, checkKeyUsage, wrapKeys, Store, createConsumer };

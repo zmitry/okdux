@@ -1,5 +1,6 @@
 import { StandardAction, StandardActionPayload } from "./createAction";
 export declare const reducerPathSymbol: unique symbol;
+export declare const storeSymbol: unique symbol;
 export declare const getKeys: () => any[];
 interface IReducerBuilder<T> {
     select<RootState>(rootState: RootState): T;

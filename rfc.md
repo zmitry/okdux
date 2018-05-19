@@ -8,7 +8,7 @@ const rootState = createState({ toggle });
 const toggleViewState = toggle
   .map((state, dispatch) => ({
     toggle: state;
-    actions: dispatch;
+    toggleState: ()=>dispatch() ;
   }))
   .map(state => state.toggle);
 

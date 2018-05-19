@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var redux_1 = require("redux");
 exports.reducerPathSymbol = Symbol();
+exports.storeSymbol = Symbol();
 var keys = [];
 var action;
 var changedMonitor = {
@@ -27,11 +28,13 @@ function getProp(object, keys) {
 function isReducerBuilder(builder) {
     return builder && typeof builder === "object" && Reflect.has(builder, exports.reducerPathSymbol);
 }
-function traverseReducers(reducers, path) {
+function traverseReducers(reducers, _a) {
+    var path = _a.path, ctx = _a.ctx;
     for (var key in reducers) {
         var reducer = reducers[key];
         if (isReducerBuilder(reducer)) {
             reducer[exports.reducerPathSymbol] = (path ? path + "." : "") + key;
+            ctx.addStore(reducer);
         }
     }
 }
@@ -66,11 +69,12 @@ var identity = function (d) {
     }
     return d;
 };
-function getDefaultReducer(initialState, path) {
+function getDefaultReducer(initialState, _a) {
+    var path = _a.path, ctx = _a.ctx;
     var defaultState = initialState;
     var nestedReducer = identity;
     if (typeof initialState === "object") {
-        traverseReducers(initialState, path);
+        traverseReducers(initialState, { path: path, ctx: ctx });
         var res = pruneInitialState(initialState);
         if (Object.keys(res.reducers).length !== 0) {
             // @ts-ignore
@@ -130,7 +134,13 @@ var ReducerBuilder = /** @class */ (function () {
         if (path) {
             this[exports.reducerPathSymbol] = path;
         }
-        var _a = getDefaultReducer(this.initialState, this[exports.reducerPathSymbol] || path), defaultState = _a.defaultState, nestedReducer = _a.nestedReducer;
+        var _a = getDefaultReducer(this.initialState, {
+            path: this[exports.reducerPathSymbol] || path,
+            ctx: {
+                // @ts-ignore
+                addStore: this.addStore
+            }
+        }), defaultState = _a.defaultState, nestedReducer = _a.nestedReducer;
         var reducer = function (state, action) {
             if (state === void 0) { state = defaultState; }
             state = nestedReducer(state, action);

@@ -69,21 +69,24 @@ export class Store {
   reactors = [];
   observers = [];
   selector;
-  currentValue;
+  currentState;
+  _consumer;
 
-  getValue = () => {
-    return this.currentValue;
+  getState = () => {
+    return this.currentState;
   };
 
-  react = fn => {
+  subscribe = fn => {
     this.reactors.push(fn);
     return () => this.reactors.filter(el => !fn);
   };
 
-  Consumer = createSubscription({
-    getCurrentValue: this.getValue,
-    subscribe: this.react
-  });
+  getConsumer = () => {
+    if (!this._consumer) {
+      this._consumer = createConsumer(this);
+    }
+    return this._consumer;
+  };
 
   constructor(fn = identity) {
     this.selector = fn;
@@ -94,6 +97,9 @@ export class Store {
       this.set(getState(), getKeys());
     });
   };
+  addStore = store => {
+    this.observers.push(store);
+  };
 
   map = fn => {
     const store = new Store(fn);
@@ -101,13 +107,12 @@ export class Store {
     return store;
   };
   set = (data, keys) => {
-    if (!this[reducerPathSymbol]) {
-      wrapKeys(keys, data);
-    }
+    wrapKeys(keys, data);
+
     let [computedData, deps] = checkKeyUsage(data, this.selector);
     const hasDeps = deps.length > 0;
-    if (hasDeps || !shallowEq(this.currentValue, computedData)) {
-      this.currentValue = computedData;
+    if (hasDeps || !shallowEq(this.getState(), computedData)) {
+      this.currentState = computedData;
       this.reactors.forEach(fn => fn(computedData));
       this.observers.forEach(el => {
         el.set(computedData, keys);
@@ -116,15 +121,14 @@ export class Store {
   };
 
   callReactors = data => {
-    const computedData = this.selector(data);
-    this.reactors.forEach(fn => fn(computedData));
+    this.reactors.forEach(fn => fn(this.selector(data)));
   };
 }
 
 function compose(...stores) {
   const store = new Store();
   function reactor() {
-    store.callReactors(stores.map(el => el.getValue()));
+    store.callReactors(stores.map(el => el.getState()));
   }
   stores.forEach(el => {
     el.react(reactor);
@@ -133,21 +137,28 @@ function compose(...stores) {
   return store;
 }
 
-// export function createConsumer(store) {
-//   return class Consumer extends React.Component {
-//     state = {};
-//     componentWillMount() {
-//       this.unsub = store.react(el => {
-//         this.setState({ state: el });
-//       });
-//     }
-//     componentWillUnount() {
-//       this.unsub();
-//     }
-//     render() {
-//       return this.props.children(this.state.state);
-//     }
-//   };
-// }
+export function createConsumer(store) {
+  return class StoreConsumer extends React.Component {
+    static displayName = `${store.displayName || "Store"}.Consumer`;
 
-// console.log("policiesStore: ", policiesStore.tree());
+    state = { currentState: store.getState() };
+
+    unsub;
+    componentDidMount() {
+      const unsub = store.subscribe(state => {
+        if (state !== this.state.currentState) {
+          // @ts-ignore
+          this.setState(() => ({ currentState: state }));
+        }
+      });
+      this.unsub = unsub;
+    }
+    componentWillUnmount() {
+      this.unsub();
+    }
+    render() {
+      // @ts-ignore
+      return this.props.children(this.state.currentState);
+    }
+  };
+}

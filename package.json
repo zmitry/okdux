@@ -1,6 +1,6 @@
 {
-  "name": "restatex",
-  "version": "1.0.0",
+  "name": "@kraken97/restate",
+  "version": "1.0.6",
   "description": "",
   "keywords": [],
   "kibana": {
@@ -10,9 +10,6 @@
   "main": "dist/lib/index.js",
   "module": "dist/restate.es5.js",
   "typings": "dist/types/index.d.ts",
-  "files": [
-    "dist"
-  ],
   "author": "Dima Zherebko <kraken@live.ru>",
   "repository": {
     "type": "git",
@@ -35,7 +32,7 @@
     "precommit": "lint-staged"
   },
   "lint-staged": {
-    "{src,test}/**/*.ts": [
+    "{src,test}/**/*.tsx?": [
       "prettier --write --no-semi --single-quote",
       "git add"
     ]
@@ -107,6 +104,7 @@
     "validate-commit-msg": "^2.12.2"
   },
   "dependencies": {
-    "create-subscription": "^16.3.2"
+    "create-subscription": "^16.3.2",
+    "react-test-renderer": "^16.3.2"
   }
 }
