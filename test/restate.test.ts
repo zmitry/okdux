@@ -1,4 +1,4 @@
-import { createState } from "../src/createReducer";
+import { createState } from "../src";
 import { createAction } from "../src/createAction";
 
 describe("restate", () => {

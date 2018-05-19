@@ -1,7 +1,7 @@
 import { combineReducers } from "redux";
 import { StandardAction, StandardActionPayload } from "./createAction";
 
-const reducerPathSymbol = Symbol();
+export const reducerPathSymbol = Symbol();
 
 let keys = [];
 let action;
@@ -70,7 +70,7 @@ function getDefaultReducer(initialState, path) {
     const res = pruneInitialState(initialState);
 
     if (Object.keys(res.reducers).length !== 0) {
-      //@ts-ignore
+      // @ts-ignore
       nestedReducer = combineReducers(res.reducers);
     }
     defaultState = res.defaultState;
@@ -95,12 +95,12 @@ type Unpacked<T> = T extends IReducerBuilder<infer U>
 
 type R<T> = { [P in keyof T]: Unpacked<T[P]> };
 
-class ReducerBuilder<T> implements IReducerBuilder<T> {
+export class ReducerBuilder<T> implements IReducerBuilder<T> {
   public handlers = {};
-  [reducerPathSymbol] = "";
+  private [reducerPathSymbol] = "";
 
   constructor(public initialState: T) {}
-  //@ts-ignore
+  // @ts-ignore
   on(action, handler) {
     if (action === undefined || action === null || !action.getType) {
       throw new Error("action should be an action, got " + action);
@@ -108,7 +108,7 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
     this.handlers[action.getType()] = handler;
     return this;
   }
-  //@ts-ignore
+  // @ts-ignore
   handle(type, handler) {
     if (Array.isArray(type)) {
       type.forEach(t => this.handle(t, handler));
@@ -157,6 +157,7 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
         }
         state = nextState;
       }
+
       return state;
     };
     this._reducer = reducer;
@@ -164,12 +165,4 @@ class ReducerBuilder<T> implements IReducerBuilder<T> {
   }
 }
 
-function createState<T>(initialState: T): IReducerBuilder<R<T>> {
-  if (initialState === undefined) {
-    throw new Error("initial state cannot be undefined");
-  }
-  // @ts-ignore
-  return new ReducerBuilder<T>(initialState);
-}
-
-export { createState, R, Unpacked, IReducerBuilder };
+export { R, Unpacked, IReducerBuilder };

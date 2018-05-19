@@ -10,7 +10,9 @@
   "main": "dist/lib/index.js",
   "module": "dist/restate.es5.js",
   "typings": "dist/types/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "author": "Dima Zherebko <kraken@live.ru>",
   "repository": {
     "type": "git",
@@ -33,7 +35,10 @@
     "precommit": "lint-staged"
   },
   "lint-staged": {
-    "{src,test}/**/*.ts": ["prettier --write --no-semi --single-quote", "git add"]
+    "{src,test}/**/*.ts": [
+      "prettier --write --no-semi --single-quote",
+      "git add"
+    ]
   },
   "config": {
     "commitizen": {
@@ -41,8 +46,7 @@
     },
     "validate-commit-msg": {
       "types": "conventional-commit-types",
-      "helpMessage":
-        "Use \"npm run commit\" instead, we use conventional-changelog format :) (https://github.com/commitizen/cz-cli)"
+      "helpMessage": "Use \"npm run commit\" instead, we use conventional-changelog format :) (https://github.com/commitizen/cz-cli)"
     }
   },
   "jest": {
@@ -50,8 +54,15 @@
       ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
     },
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
-    "moduleFileExtensions": ["ts", "tsx", "js"],
-    "coveragePathIgnorePatterns": ["/node_modules/", "/test/"],
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/test/"
+    ],
     "coverageThreshold": {
       "global": {
         "branches": 40,
@@ -63,8 +74,10 @@
     "collectCoverage": true
   },
   "devDependencies": {
+    "@types/expect": "^1.20.3",
     "@types/jest": "^22.2.3",
     "@types/node": "^9.3.0",
+    "@types/redux": "^3.6.0",
     "colors": "^1.1.2",
     "commitizen": "^2.9.6",
     "coveralls": "^3.0.0",
@@ -72,6 +85,7 @@
     "cz-conventional-changelog": "^2.0.0",
     "jest": "^22.0.2",
     "lint-staged": "^7.0.0",
+    "lodash": "latest",
     "lodash.camelcase": "^4.3.0",
     "prettier": "^1.4.4",
     "prompt": "^1.0.0",
@@ -90,6 +104,7 @@
     "tslint-config-standard": "^7.0.0",
     "typescript": "^2.8.3",
     "validate-commit-msg": "^2.12.2",
+    "redux-mock-store": "^1.5.1",
     "@types/expect": "^1.20.3",
     "@types/redux": "^3.6.0"
   }
