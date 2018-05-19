@@ -13,3 +13,4 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
 
 export * from "./createReducer";
 export * from "./createAction";
+export * from "./store";

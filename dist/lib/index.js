@@ -349,6 +349,9 @@
   exports.build = build;
   exports.createActions = createActions;
   exports.createEffects = createEffects;
+  exports.checkKeyUsage = checkKeyUsage;
+  exports.wrapKeys = wrapKeys;
+  exports.Store = Store;
 
   Object.defineProperty(exports, '__esModule', { value: true });
 

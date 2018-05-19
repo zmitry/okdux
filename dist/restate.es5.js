@@ -339,4 +339,4 @@ function createState(initialState) {
     return res;
 }
 
-export { createState, reducerPathSymbol, getKeys, ReducerBuilder, createAction, build, createActions, createEffects };
+export { createState, reducerPathSymbol, getKeys, ReducerBuilder, createAction, build, createActions, createEffects, checkKeyUsage, wrapKeys, Store };
