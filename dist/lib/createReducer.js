@@ -1,7 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var redux_1 = require("redux");
-var reducerPathSymbol = Symbol();
+exports.reducerPathSymbol = Symbol();
+var keys = [];
+var action;
+var changedMonitor = {
+    setChanged: function (newAction, key) {
+        if (action !== newAction) {
+            keys = [key];
+            action = newAction;
+        }
+        else {
+            keys.push(key);
+        }
+    }
+};
+exports.getKeys = function () { return keys; };
 function getProp(object, keys) {
     keys = Array.isArray(keys) ? keys : keys.split(".");
     object = object[keys[0]];
@@ -11,13 +25,13 @@ function getProp(object, keys) {
     return object;
 }
 function isReducerBuilder(builder) {
-    return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
+    return builder && typeof builder === "object" && Reflect.has(builder, exports.reducerPathSymbol);
 }
 function traverseReducers(reducers, path) {
     for (var key in reducers) {
         var reducer = reducers[key];
         if (isReducerBuilder(reducer)) {
-            reducer[reducerPathSymbol] = (path ? path + "." : "") + key;
+            reducer[exports.reducerPathSymbol] = (path ? path + "." : "") + key;
         }
     }
 }
@@ -59,7 +73,7 @@ function getDefaultReducer(initialState, path) {
         traverseReducers(initialState, path);
         var res = pruneInitialState(initialState);
         if (Object.keys(res.reducers).length !== 0) {
-            //@ts-ignore
+            // @ts-ignore
             nestedReducer = redux_1.combineReducers(res.reducers);
         }
         defaultState = res.defaultState;
@@ -73,8 +87,8 @@ var ReducerBuilder = /** @class */ (function () {
         this.handlers = {};
         this[_a] = "";
         this.select = function (rs) {
-            if (_this[reducerPathSymbol]) {
-                return getProp(rs, _this[reducerPathSymbol]);
+            if (_this[exports.reducerPathSymbol]) {
+                return getProp(rs, _this[exports.reducerPathSymbol]);
             }
             else {
                 return rs;
@@ -85,7 +99,7 @@ var ReducerBuilder = /** @class */ (function () {
             return function (state, props) { return fn(_this.select(state), props, state); };
         };
     }
-    //@ts-ignore
+    // @ts-ignore
     ReducerBuilder.prototype.on = function (action, handler) {
         if (action === undefined || action === null || !action.getType) {
             throw new Error("action should be an action, got " + action);
@@ -93,7 +107,7 @@ var ReducerBuilder = /** @class */ (function () {
         this.handlers[action.getType()] = handler;
         return this;
     };
-    //@ts-ignore
+    // @ts-ignore
     ReducerBuilder.prototype.handle = function (type, handler) {
         var _this = this;
         if (Array.isArray(type)) {
@@ -114,9 +128,9 @@ var ReducerBuilder = /** @class */ (function () {
     ReducerBuilder.prototype.buildReducer = function (path) {
         var _this = this;
         if (path) {
-            this[reducerPathSymbol] = path;
+            this[exports.reducerPathSymbol] = path;
         }
-        var _a = getDefaultReducer(this.initialState, this[reducerPathSymbol] || path), defaultState = _a.defaultState, nestedReducer = _a.nestedReducer;
+        var _a = getDefaultReducer(this.initialState, this[exports.reducerPathSymbol] || path), defaultState = _a.defaultState, nestedReducer = _a.nestedReducer;
         var reducer = function (state, action) {
             if (state === void 0) { state = defaultState; }
             state = nestedReducer(state, action);
@@ -126,7 +140,11 @@ var ReducerBuilder = /** @class */ (function () {
             var type = action.type, payload = action.payload;
             if (_this.handlers[type]) {
                 var handler = _this.handlers[type];
-                state = handler(state, payload, action);
+                var nextState = handler(state, payload, action);
+                if (nextState !== state) {
+                    changedMonitor.setChanged(action, _this[exports.reducerPathSymbol]);
+                }
+                state = nextState;
             }
             return state;
         };
@@ -135,14 +153,7 @@ var ReducerBuilder = /** @class */ (function () {
     };
     return ReducerBuilder;
 }());
-_a = reducerPathSymbol;
-function createState(initialState) {
-    if (initialState === undefined) {
-        throw new Error("initial state cannot be undefined");
-    }
-    // @ts-ignore
-    return new ReducerBuilder(initialState);
-}
-exports.createState = createState;
+_a = exports.reducerPathSymbol;
+exports.ReducerBuilder = ReducerBuilder;
 var _a;
 //# sourceMappingURL=createReducer.js.map

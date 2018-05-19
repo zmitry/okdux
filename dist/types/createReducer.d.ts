@@ -1,4 +1,5 @@
-import { StandardAction } from "./createAction";
+import { StandardAction, StandardActionPayload } from "./createAction";
+export declare const reducerPathSymbol: unique symbol;
 export declare const getKeys: () => any[];
 interface IReducerBuilder<T> {
     select<RootState>(rootState: RootState): T;
@@ -11,5 +12,17 @@ declare type Unpacked<T> = T extends IReducerBuilder<infer U> ? U : T extends St
 declare type R<T> = {
     [P in keyof T]: Unpacked<T[P]>;
 };
-declare function createState<T>(initialState: T): IReducerBuilder<R<T>>;
-export { createState, R, Unpacked, IReducerBuilder };
+export declare class ReducerBuilder<T> implements IReducerBuilder<T> {
+    initialState: T;
+    handlers: {};
+    private [reducerPathSymbol];
+    private _reducer;
+    constructor(initialState: T);
+    on(action: any, handler: any): this;
+    handle(type: any, handler: any): this;
+    select: <R>(rs: R) => any;
+    mapState: (fn: any) => (state: any, props: any) => any;
+    readonly reducer: any;
+    buildReducer(path: string): <P>(state: T, action: StandardActionPayload<P>) => T;
+}
+export { R, Unpacked, IReducerBuilder };

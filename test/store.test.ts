@@ -33,9 +33,6 @@ describe("restate", () => {
     const cb = jest.fn();
     const computedStore = store.map(data => ({ ui: data.ui.a, password: data.users.password }));
     computedStore.react(cb);
-    computedStore.react(e => {
-      console.log("compute", e);
-    });
 
     store.set(newData, ["ui.a", "users.password"]);
     expect(cb.mock.calls[0][0]).toEqual({ ui: "5", password: "5dsf" });
@@ -46,5 +43,25 @@ describe("restate", () => {
     expect(cb.mock.calls.length).toEqual(3);
   });
 
-  it("works ok with reducer", () => {});
+  it("works ok with reducer", () => {
+    const state = createState(0);
+    state.handle("145", (data, payload) => {
+      return payload * 2;
+    });
+    let value = 5;
+    state.map(e => e).react(console.log);
+    const reducer = state.buildReducer();
+    value = reducer(4, { type: "123" });
+    state.use({
+      subscribe: fn => {
+        fn();
+        value = reducer(4, { type: "145", payload: 6 });
+
+        fn();
+      },
+      getState: () => {
+        return value;
+      }
+    });
+  });
 });

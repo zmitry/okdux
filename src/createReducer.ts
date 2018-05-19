@@ -13,7 +13,6 @@ const changedMonitor = {
     } else {
       keys.push(key);
     }
-    console.log(action, keys);
   }
 };
 
@@ -98,6 +97,7 @@ type R<T> = { [P in keyof T]: Unpacked<T[P]> };
 export class ReducerBuilder<T> implements IReducerBuilder<T> {
   public handlers = {};
   private [reducerPathSymbol] = "";
+  private _reducer;
 
   constructor(public initialState: T) {}
   // @ts-ignore
@@ -129,7 +129,6 @@ export class ReducerBuilder<T> implements IReducerBuilder<T> {
   mapState = fn => {
     return (state, props) => fn(this.select(state), props, state);
   };
-  private _reducer;
   get reducer() {
     return this._reducer;
   }

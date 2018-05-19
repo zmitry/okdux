@@ -1,8 +1,10 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('redux')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'redux'], factory) :
-  (factory((global.restate = {}),global.redux));
-}(this, (function (exports,redux) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('redux'), require('lodash'), require('create-subscription')) :
+  typeof define === 'function' && define.amd ? define(['exports', 'redux', 'lodash', 'create-subscription'], factory) :
+  (factory((global.restate = {}),global.redux,global.lodash,global.createSubscription));
+}(this, (function (exports,redux,lodash,createSubscription) { 'use strict';
+
+  createSubscription = createSubscription && createSubscription.hasOwnProperty('default') ? createSubscription['default'] : createSubscription;
 
   var reducerPathSymbol = Symbol();
   var keys = [];
@@ -16,7 +18,6 @@
           else {
               keys.push(key);
           }
-          console.log(action, keys);
       }
   };
   var getKeys = function () { return keys; };
@@ -77,7 +78,7 @@
           traverseReducers(initialState, path);
           var res = pruneInitialState(initialState);
           if (Object.keys(res.reducers).length !== 0) {
-              //@ts-ignore
+              // @ts-ignore
               nestedReducer = redux.combineReducers(res.reducers);
           }
           defaultState = res.defaultState;
@@ -103,7 +104,7 @@
               return function (state, props) { return fn(_this.select(state), props, state); };
           };
       }
-      //@ts-ignore
+      // @ts-ignore
       ReducerBuilder.prototype.on = function (action, handler) {
           if (action === undefined || action === null || !action.getType) {
               throw new Error("action should be an action, got " + action);
@@ -111,7 +112,7 @@
           this.handlers[action.getType()] = handler;
           return this;
       };
-      //@ts-ignore
+      // @ts-ignore
       ReducerBuilder.prototype.handle = function (type, handler) {
           var _this = this;
           if (Array.isArray(type)) {
@@ -158,14 +159,130 @@
       return ReducerBuilder;
   }());
   _a = reducerPathSymbol;
-  function createState(initialState) {
-      if (initialState === undefined) {
-          throw new Error("initial state cannot be undefined");
-      }
-      // @ts-ignore
-      return new ReducerBuilder(initialState);
-  }
   var _a;
+
+  function shallowEq(a, b) {
+      if (Object.is(a, b)) {
+          return true;
+      }
+      if (typeof a !== "object" || b === null || typeof a !== "object" || b === null) {
+          return false;
+      }
+      if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) {
+          return false;
+      }
+      var keysA = Object.keys(a);
+      var keysB = Object.keys(b);
+      if (keysA.length !== keysB.length) {
+          return false;
+      }
+      for (var i = 0; i < keysA.length; i++) {
+          if (!Object.prototype.hasOwnProperty.call(b, keysA[i]) ||
+              !Object.is(a[keysA[i]], b[keysA[i]])) {
+              return false;
+          }
+      }
+      return true;
+  }
+  var trackedFn;
+  function checkKeyUsage(data, fn) {
+      fn.deps = [];
+      trackedFn = fn;
+      var result = fn(data);
+      trackedFn = null;
+      var res = [result, fn.deps];
+      fn.deps = null;
+      return res;
+  }
+  function wrapKeys(keys, data) {
+      for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
+          var keyPath = keys_1[_i];
+          var path = keyPath.split(".");
+          // eslint-disable-next-line
+          path.reduce(function (parent, prop) {
+              var obj = lodash.get(data, parent, data) || data;
+              var valueProp = obj[prop];
+              var pathToProp = parent.concat([prop]);
+              Reflect.defineProperty(obj, prop, {
+                  configurable: true,
+                  enumerable: true,
+                  get: function () {
+                      trackedFn && trackedFn.deps.push(pathToProp.join("."));
+                      return valueProp;
+                  }
+              });
+              return pathToProp;
+          }, []);
+      }
+  }
+  var identity$1 = function (d) { return d; };
+  var Store = /** @class */ (function () {
+      function Store(fn) {
+          if (fn === void 0) { fn = identity$1; }
+          var _this = this;
+          this.reactors = [];
+          this.observers = [];
+          this.getValue = function () {
+              return _this.currentValue;
+          };
+          this.react = function (fn) {
+              _this.reactors.push(fn);
+              return function () { return _this.reactors.filter(function (el) { return !fn; }); };
+          };
+          this.Consumer = createSubscription({
+              getValue: this.getValue,
+              subscribe: this.react
+          });
+          this.use = function (_a) {
+              var subscribe = _a.subscribe, getState = _a.getState;
+              subscribe(function () {
+                  _this.set(getState(), getKeys());
+              });
+          };
+          this.map = function (fn) {
+              var store = new Store(fn);
+              _this.observers.push(store);
+              return store;
+          };
+          this.set = function (data, keys) {
+              if (_this[reducerPathSymbol]) {
+                  wrapKeys(keys, data);
+              }
+              var _a = checkKeyUsage(data, _this.selector), computedData = _a[0], deps = _a[1];
+              var hasDeps = deps.length > 0;
+              if (hasDeps || !shallowEq(_this.currentValue, computedData)) {
+                  _this.currentValue = computedData;
+                  _this.reactors.forEach(function (fn) { return fn(computedData); });
+                  _this.observers.forEach(function (el) {
+                      el.set(computedData, keys);
+                  });
+              }
+          };
+          this.callReactors = function (data) {
+              var computedData = _this.selector(data);
+              _this.reactors.forEach(function (fn) { return fn(computedData); });
+          };
+          this.selector = fn;
+      }
+      return Store;
+  }());
+  // export function createConsumer(store) {
+  //   return class Consumer extends React.Component {
+  //     state = {};
+  //     componentWillMount() {
+  //       this.unsub = store.react(el => {
+  //         this.setState({ state: el });
+  //       });
+  //     }
+  //     componentWillUnount() {
+  //       this.unsub();
+  //     }
+  //     render() {
+  //       return this.props.children(this.state.state);
+  //     }
+  //   };
+  // }
+  // console.log("policiesStore: ", policiesStore.tree());
 
   function createAction(type) {
       var action = function (payload) { return ({ type: type, payload: payload }); };
@@ -211,12 +328,22 @@
       // @ts-ignore
       return createActions(actions, prefix);
   }
-  //# sourceMappingURL=createAction.js.map
 
-  //# sourceMappingURL=index.js.map
+  function createState(initialState) {
+      if (initialState === undefined) {
+          throw new Error("initial state cannot be undefined");
+      }
+      var reducer = new ReducerBuilder(initialState);
+      var store = new Store(reducer.select);
+      var res = Object.assign(reducer, store);
+      // @ts-ignore
+      return res;
+  }
 
-  exports.getKeys = getKeys;
   exports.createState = createState;
+  exports.reducerPathSymbol = reducerPathSymbol;
+  exports.getKeys = getKeys;
+  exports.ReducerBuilder = ReducerBuilder;
   exports.createAction = createAction;
   exports.build = build;
   exports.createActions = createActions;

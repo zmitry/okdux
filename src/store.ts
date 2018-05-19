@@ -1,5 +1,6 @@
 import React from "react";
 import { get } from "lodash";
+import createSubscription from "create-subscription";
 import { getKeys, reducerPathSymbol } from "./createReducer";
 
 function shallowEq(a, b) {
@@ -62,10 +63,24 @@ export function wrapKeys(keys, data) {
 
 const identity = d => d;
 export class Store {
-  reactors = new Set();
+  reactors = [];
   observers = [];
   selector;
   currentValue;
+
+  getValue = () => {
+    return this.currentValue;
+  };
+
+  react = fn => {
+    this.reactors.push(fn);
+    return () => this.reactors.filter(el => !fn);
+  };
+
+  Consumer = createSubscription({
+    getValue: this.getValue,
+    subscribe: this.react
+  });
 
   constructor(fn = identity) {
     this.selector = fn;
@@ -75,11 +90,6 @@ export class Store {
     subscribe(() => {
       this.set(getState(), getKeys());
     });
-  };
-
-  react = fn => {
-    this.reactors.add(fn);
-    return () => this.reactors.filters(el => !fn);
   };
 
   map = fn => {
@@ -93,8 +103,8 @@ export class Store {
     }
     let [computedData, deps] = checkKeyUsage(data, this.selector);
     const hasDeps = deps.length > 0;
-    if (hasDeps || !shallowEq(this.value, computedData)) {
-      this.value = computedData;
+    if (hasDeps || !shallowEq(this.currentValue, computedData)) {
+      this.currentValue = computedData;
       this.reactors.forEach(fn => fn(computedData));
       this.observers.forEach(el => {
         el.set(computedData, keys);
@@ -102,21 +112,10 @@ export class Store {
     }
   };
 
-  getValue() {
-    return this.currentValue;
-  }
-
-  callReactors(data) {
+  callReactors = data => {
     const computedData = this.selector(data);
     this.reactors.forEach(fn => fn(computedData));
-  }
-
-  tree() {
-    return {
-      value: this.currentValue,
-      children: this.observers.map(el => el.tree())
-    };
-  }
+  };
 }
 
 function compose(...stores) {
@@ -131,67 +130,21 @@ function compose(...stores) {
   return store;
 }
 
-// const policiesStore = new Store(
-//   { policies: { ui: { searchText: "qewr", counter: 0 } }, machines: [] },
-//   data => data.policies
-// );
+// export function createConsumer(store) {
+//   return class Consumer extends React.Component {
+//     state = {};
+//     componentWillMount() {
+//       this.unsub = store.react(el => {
+//         this.setState({ state: el });
+//       });
+//     }
+//     componentWillUnount() {
+//       this.unsub();
+//     }
+//     render() {
+//       return this.props.children(this.state.state);
+//     }
+//   };
+// }
 
-// const searchText = policiesStore
-//   .map(policies => policies.ui)
-//   .map(el => el.searchText);
-// const counter = policiesStore
-//   .map(policies => policies.ui)
-//   .map(el => el.counter);
-
-// const composed = compose(searchText, counter);
-
-// composed.react(data => {
-//   console.log("composed", data);
-// });
-// counter.react(el => console.log("counter", el));
-
-// searchText.react(data => {
-//   console.log(data);
-// });
-
-// policiesStore.set(
-//   { policies: { ui: { searchText: "qewr" } }, machines: [] },
-//   new Set(["policies.ui.searchText"])
-// );
-
-// let i = 0;
-// setInterval(() => {
-//   policiesStore.set(
-//     { policies: { ui: { searchText: "qewr", counter: ++i } }, machines: [] },
-//     new Set(["policies.ui.counter"])
-//   );
-// }, 6000);
-
-export function createConsumer(store) {
-  return class Consumer extends React.Component {
-    state = {};
-    componentWillMount() {
-      this.unsub = store.react(el => {
-        this.setState({ state: el });
-      });
-    }
-    componentWillUnount() {
-      this.unsub();
-    }
-    render() {
-      return this.props.children(this.state.state);
-    }
-  };
-}
-
-function Consumer({ source }) {
-  return createSubscribtion({
-    getValue: source.getValue,
-    subscribe: source.react
-  });
-}
-export const middleware = (store, getKeys) => ({ dispatch, getState }) => next => action => {
-  next(action);
-  store.set(getState(), getKeys());
-};
 // console.log("policiesStore: ", policiesStore.tree());
