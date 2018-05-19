@@ -3,8 +3,10 @@
 yarn add stateducer
 ```
 
-demo [![Edit j2y6q5o8w5](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/j2y6q5o8w5)
+demo :[![Edit j2y6q5o8w5](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/j2y6q5o8w5)
 create state
+
+
 ```js
 
 
