@@ -4,8 +4,6 @@
   (factory((global.restate = {}),global.redux,global.lodash,global.createSubscription));
 }(this, (function (exports,redux,lodash,createSubscription) { 'use strict';
 
-  createSubscription = createSubscription && createSubscription.hasOwnProperty('default') ? createSubscription['default'] : createSubscription;
-
   var reducerPathSymbol = Symbol();
   var keys = [];
   var action;
@@ -203,6 +201,9 @@
               var obj = lodash.get(data, parent, data) || data;
               var valueProp = obj[prop];
               var pathToProp = parent.concat([prop]);
+              if (typeof obj !== "object") {
+                  return pathToProp;
+              }
               Reflect.defineProperty(obj, prop, {
                   configurable: true,
                   enumerable: true,
@@ -229,8 +230,8 @@
               _this.reactors.push(fn);
               return function () { return _this.reactors.filter(function (el) { return !fn; }); };
           };
-          this.Consumer = createSubscription({
-              getValue: this.getValue,
+          this.Consumer = createSubscription.createSubscription({
+              getCurrentValue: this.getValue,
               subscribe: this.react
           });
           this.use = function (_a) {
@@ -245,7 +246,7 @@
               return store;
           };
           this.set = function (data, keys) {
-              if (_this[reducerPathSymbol]) {
+              if (!_this[reducerPathSymbol]) {
                   wrapKeys(keys, data);
               }
               var _a = checkKeyUsage(data, _this.selector), computedData = _a[0], deps = _a[1];

@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux';
 import { get } from 'lodash';
-import createSubscription from 'create-subscription';
+import { createSubscription } from 'create-subscription';
 
 var reducerPathSymbol = Symbol();
 var keys = [];
@@ -199,6 +199,9 @@ function wrapKeys(keys, data) {
             var obj = get(data, parent, data) || data;
             var valueProp = obj[prop];
             var pathToProp = parent.concat([prop]);
+            if (typeof obj !== "object") {
+                return pathToProp;
+            }
             Reflect.defineProperty(obj, prop, {
                 configurable: true,
                 enumerable: true,
@@ -226,7 +229,7 @@ var Store = /** @class */ (function () {
             return function () { return _this.reactors.filter(function (el) { return !fn; }); };
         };
         this.Consumer = createSubscription({
-            getValue: this.getValue,
+            getCurrentValue: this.getValue,
             subscribe: this.react
         });
         this.use = function (_a) {
@@ -241,7 +244,7 @@ var Store = /** @class */ (function () {
             return store;
         };
         this.set = function (data, keys) {
-            if (_this[reducerPathSymbol]) {
+            if (!_this[reducerPathSymbol]) {
                 wrapKeys(keys, data);
             }
             var _a = checkKeyUsage(data, _this.selector), computedData = _a[0], deps = _a[1];

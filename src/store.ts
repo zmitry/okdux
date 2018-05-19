@@ -1,6 +1,6 @@
 import React from "react";
 import { get } from "lodash";
-import createSubscription from "create-subscription";
+import { createSubscription } from "create-subscription";
 import { getKeys, reducerPathSymbol } from "./createReducer";
 
 function shallowEq(a, b) {
@@ -48,6 +48,9 @@ export function wrapKeys(keys, data) {
       const obj = get(data, parent, data) || data;
       const valueProp = obj[prop];
       const pathToProp = [...parent, prop];
+      if (typeof obj !== "object") {
+        return pathToProp;
+      }
       Reflect.defineProperty(obj, prop, {
         configurable: true,
         enumerable: true,
@@ -78,7 +81,7 @@ export class Store {
   };
 
   Consumer = createSubscription({
-    getValue: this.getValue,
+    getCurrentValue: this.getValue,
     subscribe: this.react
   });
 
@@ -98,7 +101,7 @@ export class Store {
     return store;
   };
   set = (data, keys) => {
-    if (this[reducerPathSymbol]) {
+    if (!this[reducerPathSymbol]) {
       wrapKeys(keys, data);
     }
     let [computedData, deps] = checkKeyUsage(data, this.selector);

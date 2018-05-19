@@ -5,38 +5,34 @@ toggle.on(toggle, (state, payload) => payload);
 
 const rootState = createState({ toggle });
 
-const toggleViewState = toggle.map((state, dispatch)=> {
-  state: {
-    toggle: state
-  },
-  actions: dispatch
-}).map(state=> state.toggle)
+const toggleViewState = toggle
+  .map((state, dispatch) => ({
+    toggle: state;
+    actions: dispatch;
+  }))
+  .map(state => state.toggle);
 
 rootState.use({
   subscribe: store.subscribe,
-  getState: store.getState,
+  getState: store.getState
 });
 
 ///
 
 function Hello() {
   return (
-    <Consumer source={toggleViewState}>
+    <toggleViewState.Consumer>
       {({ state, actions }) => {
         return <div />;
       }}
-    </Consumer>
+    </toggleViewState.Consumer>
   );
 }
-
-
 
 class List extends React.Component {
   render() {
     return (
-      <Provider store={rootState}>
         <Hello />
-      </Provider>
     );
   }
 }

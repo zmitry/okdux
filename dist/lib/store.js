@@ -46,6 +46,9 @@ function wrapKeys(keys, data) {
             var obj = lodash_1.get(data, parent, data) || data;
             var valueProp = obj[prop];
             var pathToProp = parent.concat([prop]);
+            if (typeof obj !== "object") {
+                return pathToProp;
+            }
             Reflect.defineProperty(obj, prop, {
                 configurable: true,
                 enumerable: true,
@@ -73,8 +76,8 @@ var Store = /** @class */ (function () {
             _this.reactors.push(fn);
             return function () { return _this.reactors.filter(function (el) { return !fn; }); };
         };
-        this.Consumer = create_subscription_1.default({
-            getValue: this.getValue,
+        this.Consumer = create_subscription_1.createSubscription({
+            getCurrentValue: this.getValue,
             subscribe: this.react
         });
         this.use = function (_a) {
@@ -89,7 +92,7 @@ var Store = /** @class */ (function () {
             return store;
         };
         this.set = function (data, keys) {
-            if (_this[createReducer_1.reducerPathSymbol]) {
+            if (!_this[createReducer_1.reducerPathSymbol]) {
                 wrapKeys(keys, data);
             }
             var _a = checkKeyUsage(data, _this.selector), computedData = _a[0], deps = _a[1];
