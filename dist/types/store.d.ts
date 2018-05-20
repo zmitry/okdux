@@ -1,33 +1,23 @@
-export declare function checkKeyUsage(data: any, fn: any): any[];
+export declare function checkKeyUsage(fn: any, data: any, context: any): any[];
 export declare function wrapKeys(keys: any, data: any): void;
-export declare class Store {
+export interface IStore<T> {
+    map: <P>(fn: (data: T, ctx: any) => P) => IStore<P>;
+}
+export declare class Store<T> implements IStore<T> {
     reactors: any[];
     observers: any[];
     selector: any;
     currentState: any;
-    _consumer: any;
-    getState: () => any;
-    subscribe: (fn: any) => () => any[];
-    getConsumer: () => any;
-    constructor(fn?: (d: any) => any);
-    use: ({ subscribe, getState }: {
-        subscribe: any;
-        getState: any;
-    }) => void;
-    addStore: (store: any) => void;
-    map: (fn: any) => Store;
-    set: (data: any, keys: any) => void;
-    callReactors: (data: any) => void;
+    root: boolean;
+    deps: any[];
+    initialized: boolean;
+    watchNested: boolean;
+    getState(): any;
+    subscribe(fn: any): () => any[];
+    constructor(fn: (d: any) => any, watchNested: any);
+    forEach(fn: any): void;
+    use(dataOrFn: any): any;
+    addStore(store: any): any;
+    map(fn: any, shouldWatchNested?: boolean): any;
+    set(data: any, keys: any): void;
 }
-export declare function createConsumer(store: any): {
-    new (): {
-        state: {
-            currentState: any;
-        };
-        unsub: any;
-        componentDidMount(): void;
-        componentWillUnmount(): void;
-        render(): any;
-    };
-    displayName: string;
-};

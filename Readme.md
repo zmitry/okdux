@@ -1,118 +1,76 @@
 # install
+
 ```
 yarn add stateducer
 ```
 
 create state
+
 ```js
+import { createState, createActions, build, local, Consumer } from "@kraken97/restate";
 
+const actions = createActions({
+  toggle: build.plain,
+  inc: build.plain,
+  text: build.plain,
+  popup: build.mutator(false)
+});
 
-const events = createActions(
-  {
-    update: build.plain,
-    replace: build.plain,
-    setSelectedMachines: build.plain,
-    create: build.plain
-  },
-  "machines"
-);
+const toggle = createState(true);
+const counter = createState(0);
+const text = createState("");
+text.on(actions, (data, payload) => {
+  return payload;
+});
 
-export const entities = createState({})
-  .on(events.replace, (_, payload) => payload)
-  .on(events.create, reducer.set)
-  .on(effectsEvents.getOne.success, reducer.set)
-  .on(events.update, reducer.update);
+const ui = createState({
+  counter,
+  text,
+  opened: actions.popup /*make reducer that returns payload */
+});
 
-export const ui = createState({}).on(
-  events.setSelectedMachines,
-  (state, payload) => {
-    return { ...state, selectedMachines: payload };
+const rootState = createState({ toggle, ui });
+rootState.use(local);
+
+const textState = ui.map((el, dispatch) => ({
+  t: el.text,
+  setText: text => dispatch(actions.text(text + ".jpg"))
+})); // it will track only changes for text
+
+class List extends React.Component {
+  render() {
+    return (
+      <Consumer source={textState}>
+        {data => {
+          return <div>{data}</div>;
+        }}
+      </Consumer>
+    );
   }
-);
-
-export const actionsState = handleActionsState(createState({}), effectsEvents);
-
-export const machinesRootState = createState({
-  entities,
-  ui,
-  actions: actionsState
-});
-```
-connect state 
-```js
-const rootReducer = combineReducers({
-  ...reducerMapObj,
-  machines: machinesRootState.buildReducer("machines"),
-  actions: actionStateReducer
-});
-// or
-const rootState = createState({ machines, ...otherStuff }),
-const rootReducer = rootState.buildReducer();
-```
-use state
-```js
-import {  machines, ui  } from ‘./state’
-
-const mapStateToProps = (state) => {
-  const machinesState = machines.select(state);
-  const machinesUiState = ui.select(state);
-  return {  first: machinesState[0], activeMachine: machineUiState.activeMachine  }  
-} 
-```
-
-
-# comparing to coredux
-```js
-// coredux
-const fetchPostsRequest = createAction();
-const fetchPostsSuccess = createAction();
-
-const getArePostsFetching = createQuery();
-const getPostsIds = createQuery();
-const getPostsEntities = createQuery();
-const getPosts = createQuery();
-
-export const posts = createNode(defaultState)
-  .setter(fetchPostsRequest, state => ({ ...state, areFetching: true }))
-  .setter(fetchPostsSuccess, (state, posts) => ({
-    areFetching: false,
-    ids: posts.map(post => post.id),
-    entities: new Map(posts.map(post => [post.id, post]))
-  }))
-  .getter(getArePostsFetching, select => state => state.areFetching)
-  .getter(getPostsIds, select => state => state.ids)
-  .getter(getPostsEntities, select => state => state.entities)
-  .getter(getPosts, select =>
-    createSelector(
-      select(getPostsEntities),
-      select(getPostsIds),
-      (entities, ids) => ids.map(id => entities.get(id))
-    )
-  );
-
-// restate
-
-export const fetchPostsRequest = createAction();
-export const fetchPostsSuccess = createAction();
-
-const ids = createState([]);
-const entities = createState({});
-const areFetching = createState(false);
-export const posts = createState({ ids, entities, areFetching });
-
-
-ids.on(fetchPostsSuccess, (_, posts)=> posts.map(post => post.id))
-entities.on(fetchPostsSuccess, (_, posts)=> new Map(posts.map(post => [post.id, post])))
-rootState.on(fetchPostsRequest, state => ({ ...state, areFetching: true }));
-
-
-const rootShape = {
-    areFetching: areFetching.select,
-    posts: createSelector(
-        entities.select,
-        ids.select,
-        (entities, ids) => ids.map(id => entities.get(id))
-      ),
-    entities:  entities.select
 }
+```
+
+# benchmarks
+
+```
+immutableJS
+  create: 291 ms
+  update: 46 ms
+  heap:
+    total 97.5 Mb
+    used  77.7 Mb
+
+* immer (proxy) - without autofreeze
+  create: 20 ms
+  update: 85 ms
+  heap:
+    total 13.0 Mb
+    used  23.5 Mb
+
+* restate x
+  create: 64 ms
+  update: 12 ms
+  heap:
+    total 4.5 Mb
+    used  24.5 Mb
 ```

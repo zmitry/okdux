@@ -1,20 +1,21 @@
 ```jsx
-const toggle = createAction("toggle");
-const toggle = createState(toggle);
-toggle.on(toggle, (state, payload) => payload);
+const toggleEvent = createAction("toggle");
+const toggle = createState(true);
+toggle.on(toggleEvent, (state, payload) => !state);
 
 const rootState = createState({ toggle });
 
 const toggleViewState = toggle
   .map((state, dispatch) => ({
     toggle: state;
-    toggleState: ()=>dispatch() ;
+    toggleState: ()=>dispatch(toggleEvent()) ;
   }))
   .map(state => state.toggle);
 
 rootState.use({
   subscribe: store.subscribe,
-  getState: store.getState
+  getState: store.getState,
+  context: dispatch
 });
 
 ///
@@ -33,6 +34,85 @@ class List extends React.Component {
   render() {
     return (
         <Hello />
+    );
+  }
+}
+```
+
+example without redux
+
+```jsx
+const toggle = createAction("toggle");
+const toggleEvent = createState(true);
+toggle.on(toggleEvent, (state, payload) => !state);
+
+const rootState = createState({ toggle });
+
+const toggleViewState = toggle
+  .map((state, dispatch) => ({
+    toggle: state;
+    toggleState: dispatch(toggleEvent());
+  }))
+  .map(state => state.toggle);
+
+
+
+class Provider extends React.Component {
+  state = {}
+  componentWillMount(){
+    const reducer = rootState.buildReducer();
+    rootState.use({
+      subscribe: fn=> {
+        this.cb = fn;
+      },
+      getState: ()=>this.state,
+      context: (action)=>{
+        return this.setState(state=>reducer(state, action), this.cb)
+      }
+    });
+  }
+  render(){
+    return this.props.children
+  }
+}
+```
+
+computed
+
+```jsx
+const toggle = createState(true);
+const counter = createState(0);
+const text = createState("");
+const ui = createState({ counter, text });
+
+const rootState = createState({ toggle, ui });
+
+ui
+  .map(el => el.text)
+  .compose(toggle, (text, toggle) => ({ text: text, toggle }))
+  .map(state => {
+    // track only toggle, and text
+  });
+```
+
+```jsx
+const toggle = createState(true);
+const counter = createState(0);
+const text = createState("");
+const ui = createState({ counter, text });
+
+const rootState = createState({ toggle, ui });
+
+const textState = ui.map(el => el.text);
+
+class List extends React.Component {
+  render() {
+    return (
+      <Consumer source={textState}>
+        {data => {
+          return <div>{data}</div>;
+        }}
+      </Consumer>
     );
   }
 }

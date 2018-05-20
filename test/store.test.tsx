@@ -1,7 +1,7 @@
 import React from "react";
 import { createStore } from "redux";
 import { wrapKeys, checkKeyUsage, Store } from "../src/store";
-import { createState, createAction, createConsumer } from "../src";
+import { createState, createAction, Consumer, local } from "../src";
 import Render from "react-test-renderer";
 let mockedData;
 let changedKeys;
@@ -14,18 +14,18 @@ describe("restate", () => {
   it("works ok with key check", () => {
     wrapKeys(changedKeys, mockedData);
 
-    const [_1, deps] = checkKeyUsage(mockedData, data => {
+    const [_1, deps] = checkKeyUsage(data => {
       return data.ui.a;
-    });
+    }, mockedData);
     expect(deps).toEqual(["ui", "ui.a"]);
-    const [_2, deps2] = checkKeyUsage(mockedData, data => {
+    const [_2, deps2] = checkKeyUsage(data => {
       return data.ui;
-    });
+    }, mockedData);
     expect(deps2).toEqual(["ui"]);
 
-    const [_3, deps3] = checkKeyUsage(mockedData, data => {
+    const [_3, deps3] = checkKeyUsage(data => {
       return { a: data.ui, b: data.users };
-    });
+    }, mockedData);
     expect(deps3).toEqual(["ui", "users"]);
   });
 
@@ -59,9 +59,8 @@ describe("restate", () => {
     rootState.use(store);
     store.dispatch({ type: "" });
     // store.dispatch(toggleEvent());
-    const Consumer = createConsumer(toggle);
     const renderer = Render.create(
-      <Consumer>
+      <Consumer source={toggle}>
         {data => {
           expect(data).toEqual(toggle.getState());
           return <div>{JSON.stringify(data)}</div>;
@@ -80,31 +79,71 @@ describe("restate", () => {
     const rootState = createState({ toggle, counter });
     const reducer = rootState.buildReducer();
     const store = createStore(reducer);
-    rootState.use(store);
 
     const toggleViewState = rootState
       .map(state => {
         return {
-          toggle: state.toggle
+          toggle: { a: { c: state.toggle } }
         };
       })
       .map(el => ({
         state: el,
         toggleEvent: e => dispatch(toggleEvent(e))
       }));
+    rootState.use({
+      getState: store.getState,
+      subscribe: store.subscribe,
+      context: "hello"
+    });
+
     const fn1 = jest.fn();
     const fn2 = jest.fn();
+    const fn3 = jest.fn();
+    rootState.map(fn3);
 
     toggleViewState.subscribe(fn1);
     counter.subscribe(fn2);
+
     store.dispatch({ type: "init" });
+
     // store.dispatch(toggleEvent());
     // store.dispatch(toggleEvent());
-    // store.dispatch(toggleEvent());
+    store.dispatch(toggleEvent());
     store.dispatch(counterEvent());
     store.dispatch(counterEvent());
     store.dispatch(counterEvent());
-    expect(fn1.mock.calls.length).toBe(1);
+
+    expect(fn1.mock.calls.length).toBe(2);
     expect(fn2.mock.calls.length).toBe(4);
+    // expect(fn3.mock.calls[0][1]).toEqual("hello");
+  });
+
+  it("works ok with ministore", () => {
+    const e = createAction("e");
+    const state = createState("a");
+    state.on(e, state => state);
+    const fn = jest.fn();
+
+    state.map(fn);
+
+    const e2 = createAction("a");
+    const state2 = createState("b");
+
+    state2.on(e2, (_, p) => p);
+    const common = createState({ state, state2 });
+
+    state2.subscribe(data => {
+      console.log("e2", data);
+    });
+    state.subscribe(() => {
+      console.log("e1");
+    });
+    const st = common.use(local);
+
+    st.dispatch(e());
+    st.dispatch(e2(1));
+    st.dispatch(e2(5));
+
+    expect(fn.mock.calls[0][1]).toEqual(st.dispatch);
   });
 });

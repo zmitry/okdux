@@ -1,39 +1,13 @@
 import React from "react";
-import { get } from "lodash";
-import { createSubscription } from "create-subscription";
-import { getKeys, reducerPathSymbol } from "./createReducer";
-
-function shallowEq(a, b) {
-  if (Object.is(a, b)) {
-    return true;
-  }
-  if (typeof a !== "object" || b === null || typeof a !== "object" || b === null) {
-    return false;
-  }
-  if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) {
-    return false;
-  }
-  const keysA = Object.keys(a);
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) {
-    return false;
-  }
-  for (let i = 0; i < keysA.length; i++) {
-    if (
-      !Object.prototype.hasOwnProperty.call(b, keysA[i]) ||
-      !Object.is(a[keysA[i]], b[keysA[i]])
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
+import { get, intersection, uniq } from "lodash";
+import { getKeys, reducerPathSymbol, ctxSymbol } from "./createReducer";
+import { shallowEquals } from "./shallowEquals";
 
 let trackedFn;
-export function checkKeyUsage(data, fn) {
+export function checkKeyUsage(fn, data, context) {
   fn.deps = [];
   trackedFn = fn;
-  const result = fn(data);
+  const result = fn(data, context);
   trackedFn = null;
   const res = [result, fn.deps];
   fn.deps = null;
@@ -65,100 +39,105 @@ export function wrapKeys(keys, data) {
 }
 
 const identity = d => d;
-export class Store {
+
+export interface IStore<T> {
+  map: <P>(fn: (data: T, ctx: any) => P) => IStore<P>;
+}
+
+export class Store<T> implements IStore<T> {
   reactors = [];
   observers = [];
   selector;
   currentState;
-  _consumer;
+  root = false;
+  deps = [];
+  initialized = false;
+  watchNested = true;
 
-  getState = () => {
+  getState() {
     return this.currentState;
-  };
-
-  subscribe = fn => {
-    this.reactors.push(fn);
-    return () => this.reactors.filter(el => !fn);
-  };
-
-  getConsumer = () => {
-    if (!this._consumer) {
-      this._consumer = createConsumer(this);
-    }
-    return this._consumer;
-  };
-
-  constructor(fn = identity) {
-    this.selector = fn;
   }
 
-  use = ({ subscribe, getState }) => {
+  subscribe(fn) {
+    // if (!this.initialized) {
+    //   this.use(local);
+    // }
+
+    this.reactors.push(fn);
+    return () => this.reactors.filter(el => !fn);
+  }
+
+  constructor(fn = identity, watchNested) {
+    this.selector = fn;
+    this.watchNested = watchNested;
+  }
+
+  forEach(fn) {
+    this.observers.forEach(el => {
+      fn(el);
+      el.forEach(fn);
+    });
+  }
+  use(dataOrFn) {
+    if (typeof dataOrFn === "function") {
+      return dataOrFn(this);
+    }
+    const { subscribe, getState, context } = dataOrFn;
+    this.root = true;
+    this.initialized = true;
+    this[ctxSymbol].context = context;
+    this.forEach(el => {
+      el[ctxSymbol] = this[ctxSymbol];
+      el.initialized = true;
+    });
+    const getKeys = this[ctxSymbol].changesMonitor.getChangedKeys;
     subscribe(() => {
       this.set(getState(), getKeys());
     });
-  };
-  addStore = store => {
-    this.observers.push(store);
-  };
-
-  map = fn => {
-    const store = new Store(fn);
+    return dataOrFn;
+  }
+  addStore(store) {
     this.observers.push(store);
     return store;
-  };
-  set = (data, keys) => {
-    wrapKeys(keys, data);
+  }
 
-    let [computedData, deps] = checkKeyUsage(data, this.selector);
-    const hasDeps = deps.length > 0;
-    if (hasDeps || !shallowEq(this.getState(), computedData)) {
+  map(fn, shouldWatchNested = true) {
+    const store = new Store(fn, shouldWatchNested);
+    return this.addStore(store);
+  }
+  set(data, keys) {
+    if (this.root) {
+      wrapKeys(keys, data);
+    }
+    const context = this[ctxSymbol] && this[ctxSymbol].context;
+    const state = this.getState();
+    let [computedData, deps] = checkKeyUsage(this.selector, data, context);
+    // @ts-ignore
+    if (this.watchNested) {
+      this.deps = uniq([...this.deps, ...deps]);
+
+      if (this.deps.length > 0 && intersection(this.deps, keys).length === 0) {
+        return;
+      }
+    }
+    if (!shallowEquals(state, computedData)) {
       this.currentState = computedData;
       this.reactors.forEach(fn => fn(computedData));
       this.observers.forEach(el => {
         el.set(computedData, keys);
       });
     }
-  };
-
-  callReactors = data => {
-    this.reactors.forEach(fn => fn(this.selector(data)));
-  };
-}
-
-function compose(...stores) {
-  const store = new Store();
-  function reactor() {
-    store.callReactors(stores.map(el => el.getState()));
   }
-  stores.forEach(el => {
-    el.react(reactor);
-  });
-
-  return store;
 }
 
-export function createConsumer(store) {
-  return class StoreConsumer extends React.Component {
-    static displayName = `${store.displayName || "Store"}.Consumer`;
+// function compose(...stores) {
+//   const store = new Store();
+//   function reactor() {
+//     store.callReactors(stores.map(el => el.getState()));
+//   }
+//   stores.forEach(el => {
+//     el.react(reactor);
+//   });
 
-    state = { currentState: store.getState() };
-
-    unsub;
-    componentDidMount() {
-      const unsub = store.subscribe(state => {
-        if (state !== this.state.currentState) {
-          // @ts-ignore
-          this.setState(() => ({ currentState: state }));
-        }
-      });
-      this.unsub = unsub;
-    }
-    componentWillUnmount() {
-      this.unsub();
-    }
-    render() {
-      // @ts-ignore
-      return this.props.children(this.state.currentState);
-    }
-  };
-}
+//   return store;
+// }

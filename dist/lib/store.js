@@ -1,46 +1,13 @@
 "use strict";
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = Object.setPrototypeOf ||
-        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
-var react_1 = require("react");
 var lodash_1 = require("lodash");
 var createReducer_1 = require("./createReducer");
-function shallowEq(a, b) {
-    if (Object.is(a, b)) {
-        return true;
-    }
-    if (typeof a !== "object" || b === null || typeof a !== "object" || b === null) {
-        return false;
-    }
-    if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) {
-        return false;
-    }
-    var keysA = Object.keys(a);
-    var keysB = Object.keys(b);
-    if (keysA.length !== keysB.length) {
-        return false;
-    }
-    for (var i = 0; i < keysA.length; i++) {
-        if (!Object.prototype.hasOwnProperty.call(b, keysA[i]) ||
-            !Object.is(a[keysA[i]], b[keysA[i]])) {
-            return false;
-        }
-    }
-    return true;
-}
+var shallowEquals_1 = require("./shallowEquals");
 var trackedFn;
-function checkKeyUsage(data, fn) {
+function checkKeyUsage(fn, data, context) {
     fn.deps = [];
     trackedFn = fn;
-    var result = fn(data);
+    var result = fn(data, context);
     trackedFn = null;
     var res = [result, fn.deps];
     fn.deps = null;
@@ -74,102 +41,95 @@ function wrapKeys(keys, data) {
 exports.wrapKeys = wrapKeys;
 var identity = function (d) { return d; };
 var Store = /** @class */ (function () {
-    function Store(fn) {
+    function Store(fn, watchNested) {
         if (fn === void 0) { fn = identity; }
-        var _this = this;
         this.reactors = [];
         this.observers = [];
-        this.getState = function () {
-            return _this.currentState;
-        };
-        this.subscribe = function (fn) {
-            _this.reactors.push(fn);
-            return function () { return _this.reactors.filter(function (el) { return !fn; }); };
-        };
-        this.getConsumer = function () {
-            if (!_this._consumer) {
-                _this._consumer = createConsumer(_this);
-            }
-            return _this._consumer;
-        };
-        this.use = function (_a) {
-            var subscribe = _a.subscribe, getState = _a.getState;
-            subscribe(function () {
-                _this.set(getState(), createReducer_1.getKeys());
-            });
-        };
-        this.addStore = function (store) {
-            _this.observers.push(store);
-        };
-        this.map = function (fn) {
-            var store = new Store(fn);
-            _this.observers.push(store);
-            return store;
-        };
-        this.set = function (data, keys) {
-            wrapKeys(keys, data);
-            var _a = checkKeyUsage(data, _this.selector), computedData = _a[0], deps = _a[1];
-            var hasDeps = deps.length > 0;
-            if (hasDeps || !shallowEq(_this.getState(), computedData)) {
-                _this.currentState = computedData;
-                _this.reactors.forEach(function (fn) { return fn(computedData); });
-                _this.observers.forEach(function (el) {
-                    el.set(computedData, keys);
-                });
-            }
-        };
-        this.callReactors = function (data) {
-            _this.reactors.forEach(function (fn) { return fn(_this.selector(data)); });
-        };
+        this.root = false;
+        this.deps = [];
+        this.initialized = false;
+        this.watchNested = true;
         this.selector = fn;
+        this.watchNested = watchNested;
     }
+    Store.prototype.getState = function () {
+        return this.currentState;
+    };
+    Store.prototype.subscribe = function (fn) {
+        // if (!this.initialized) {
+        //   this.use(local);
+        // }
+        var _this = this;
+        this.reactors.push(fn);
+        return function () { return _this.reactors.filter(function (el) { return !fn; }); };
+    };
+    Store.prototype.forEach = function (fn) {
+        this.observers.forEach(function (el) {
+            fn(el);
+            el.forEach(fn);
+        });
+    };
+    Store.prototype.use = function (dataOrFn) {
+        var _this = this;
+        if (typeof dataOrFn === "function") {
+            return dataOrFn(this);
+        }
+        var subscribe = dataOrFn.subscribe, getState = dataOrFn.getState, context = dataOrFn.context;
+        this.root = true;
+        this.initialized = true;
+        this[createReducer_1.ctxSymbol].context = context;
+        this.forEach(function (el) {
+            el[createReducer_1.ctxSymbol] = _this[createReducer_1.ctxSymbol];
+            el.initialized = true;
+        });
+        var getKeys = this[createReducer_1.ctxSymbol].changesMonitor.getChangedKeys;
+        subscribe(function () {
+            _this.set(getState(), getKeys());
+        });
+        return dataOrFn;
+    };
+    Store.prototype.addStore = function (store) {
+        this.observers.push(store);
+        return store;
+    };
+    Store.prototype.map = function (fn, shouldWatchNested) {
+        if (shouldWatchNested === void 0) { shouldWatchNested = true; }
+        var store = new Store(fn, shouldWatchNested);
+        return this.addStore(store);
+    };
+    Store.prototype.set = function (data, keys) {
+        if (this.root) {
+            wrapKeys(keys, data);
+        }
+        var context = this[createReducer_1.ctxSymbol] && this[createReducer_1.ctxSymbol].context;
+        var state = this.getState();
+        var _a = checkKeyUsage(this.selector, data, context), computedData = _a[0], deps = _a[1];
+        // @ts-ignore
+        if (this.watchNested) {
+            this.deps = lodash_1.uniq(this.deps.concat(deps));
+            if (this.deps.length > 0 && lodash_1.intersection(this.deps, keys).length === 0) {
+                return;
+            }
+        }
+        if (!shallowEquals_1.shallowEquals(state, computedData)) {
+            this.currentState = computedData;
+            this.reactors.forEach(function (fn) { return fn(computedData); });
+            this.observers.forEach(function (el) {
+                el.set(computedData, keys);
+            });
+        }
+    };
     return Store;
 }());
 exports.Store = Store;
-function compose() {
-    var stores = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-        stores[_i] = arguments[_i];
-    }
-    var store = new Store();
-    function reactor() {
-        store.callReactors(stores.map(function (el) { return el.getState(); }));
-    }
-    stores.forEach(function (el) {
-        el.react(reactor);
-    });
-    return store;
-}
-function createConsumer(store) {
-    return _a = /** @class */ (function (_super) {
-            __extends(StoreConsumer, _super);
-            function StoreConsumer() {
-                var _this = _super !== null && _super.apply(this, arguments) || this;
-                _this.state = { currentState: store.getState() };
-                return _this;
-            }
-            StoreConsumer.prototype.componentDidMount = function () {
-                var _this = this;
-                var unsub = store.subscribe(function (state) {
-                    if (state !== _this.state.currentState) {
-                        // @ts-ignore
-                        _this.setState(function () { return ({ currentState: state }); });
-                    }
-                });
-                this.unsub = unsub;
-            };
-            StoreConsumer.prototype.componentWillUnmount = function () {
-                this.unsub();
-            };
-            StoreConsumer.prototype.render = function () {
-                // @ts-ignore
-                return this.props.children(this.state.currentState);
-            };
-            return StoreConsumer;
-        }(react_1.default.Component)),
-        _a.displayName = (store.displayName || "Store") + ".Consumer",
-        _a;
-    var _a;
-}
-exports.createConsumer = createConsumer;
+// function compose(...stores) {
+//   const store = new Store();
+//   function reactor() {
+//     store.callReactors(stores.map(el => el.getState()));
+//   }
+//   stores.forEach(el => {
+//     el.react(reactor);
+//   });
+//   return store;
+// }
 //# sourceMappingURL=store.js.map

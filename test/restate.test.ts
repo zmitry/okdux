@@ -55,7 +55,7 @@ describe("restate", () => {
   it("works with nested objects", () => {
     c = createState({ f: { d: { a: "q" } }, foo: "qwer" });
     const reducer = c.buildReducer();
-    expect(reducer({}, {})).toEqual({ f: { d: { a: "q" } }, foo: "qwer" });
+    expect(reducer()).toEqual({ f: { d: { a: "q" } }, foo: "qwer" });
   });
   it("handles errors", () => {
     expect(() => createState.on(undefined)).toThrow();

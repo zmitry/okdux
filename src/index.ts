@@ -1,16 +1,31 @@
-import { IReducerBuilder, ReducerBuilder, R } from "./createReducer";
-import { Store } from "./store";
-export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
+import { IReducerBuilder, ReducerBuilder, R, reducerPathSymbol } from "./createReducer";
+import { Store, IStore } from "./store";
+
+export function createState<T>(initialState: T): IReducerBuilder<R<T>> & IStore<R<T>> {
   if (initialState === undefined) {
     throw new Error("initial state cannot be undefined");
   }
   const reducer = new ReducerBuilder<T>(initialState);
+  // @ts-ignore
   const store = new Store(reducer.select);
   const res = Object.assign(reducer, store);
+
   // @ts-ignore
-  return res;
+  const res2 = Object.assign(res, {
+    use: store.use.bind(res),
+    set: store.set.bind(res),
+    addStore: store.addStore.bind(res),
+    map: store.map.bind(res),
+    getState: store.getState.bind(res),
+    forEach: store.forEach.bind(res),
+    subscribe: store.subscribe.bind(res)
+  });
+  // @ts-ignore
+  return res2;
 }
 
 export * from "./createReducer";
 export * from "./createAction";
 export * from "./store";
+export * from "./Consumer";
+export * from "./ministore";

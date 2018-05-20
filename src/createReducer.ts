@@ -1,8 +1,9 @@
 import { combineReducers } from "redux";
 import { StandardAction, StandardActionPayload } from "./createAction";
+import { Store } from ".";
 
 export const reducerPathSymbol = Symbol();
-export const storeSymbol = Symbol();
+export const ctxSymbol = Symbol();
 
 let keys = [];
 let action;
@@ -16,6 +17,22 @@ const changedMonitor = {
     }
   }
 };
+function makeChangesMonitor() {
+  let keys = [];
+  let action;
+  return {
+    setChanged: (newAction, key) => {
+      if (action !== newAction) {
+        keys = [key];
+        action = newAction;
+      } else {
+        keys.push(key);
+      }
+    },
+    // @ts-ignore
+    getChangedKeys: () => keys
+  };
+}
 
 export const getKeys = () => keys;
 function getProp(object, keys) {
@@ -45,21 +62,31 @@ const atomReducer = (defaultV, type) => (state = defaultV, action) =>
 
 const identityWithDefault = d => (s = d) => s;
 function pruneInitialState(initialState) {
-  return Object.keys(initialState).reduce(
-    (acc, el) => {
-      if (isReducerBuilder(initialState[el])) {
-        acc.reducers[el] = initialState[el].buildReducer();
-      } else if (initialState[el] && initialState[el].getType) {
-        const t = initialState[el].getType();
-        acc.reducers[el] = atomReducer(initialState[el].defaultValue, t);
-      } else {
-        acc.defaultState[el] = initialState[el];
+  const acc = { reducers: {}, defaultState: {} };
+  let hasReducers = false;
+  for (let item in initialState) {
+    const el = item;
+    if (isReducerBuilder(initialState[el])) {
+      acc.reducers[el] = initialState[el].buildReducer();
+      hasReducers = true;
+    } else if (initialState[el] && initialState[el].getType) {
+      const t = initialState[el].getType();
+      hasReducers = true;
+      acc.reducers[el] = atomReducer(initialState[el].defaultValue, t);
+    } else {
+      acc.defaultState[el] = initialState[el];
+    }
+  }
+  if (hasReducers) {
+    for (let el in initialState) {
+      if (!isReducerBuilder(initialState[el]) && !initialState[el].getType) {
         acc.reducers[el] = identityWithDefault(initialState[el]);
       }
-      return acc;
-    },
-    { reducers: {}, defaultState: {} }
-  );
+    }
+  } else {
+    return { reducers: {}, defaultState: initialState };
+  }
+  return acc;
 }
 let identity = <T>(d: T, ..._: any[]): T => d;
 
@@ -67,7 +94,7 @@ function getDefaultReducer(initialState, { path, ctx }) {
   let defaultState = initialState;
   let nestedReducer = identity;
 
-  if (typeof initialState === "object") {
+  if (typeof initialState === "object" && !Array.isArray(initialState)) {
     traverseReducers(initialState, { path, ctx });
     const res = pruneInitialState(initialState);
 
@@ -100,6 +127,7 @@ type R<T> = { [P in keyof T]: Unpacked<T[P]> };
 export class ReducerBuilder<T> implements IReducerBuilder<T> {
   public handlers = {};
   private [reducerPathSymbol] = "";
+  private [ctxSymbol] = {};
   private _reducer;
 
   constructor(public initialState: T) {}
@@ -139,14 +167,21 @@ export class ReducerBuilder<T> implements IReducerBuilder<T> {
     if (path) {
       this[reducerPathSymbol] = path;
     }
-
+    // @ts-ignore
+    if (!this[ctxSymbol].changesMonitor) {
+      // @ts-ignore
+      this[ctxSymbol].changesMonitor = makeChangesMonitor();
+    }
     const { defaultState, nestedReducer } = getDefaultReducer(this.initialState, {
       path: this[reducerPathSymbol] || path,
       ctx: {
         // @ts-ignore
-        addStore: this.addStore
+        addStore: this.addStore,
+        // @ts-ignore
+        changesMonitor: this[ctxSymbol].changesMonitor
       }
     });
+
     const reducer = <P>(state: T = defaultState, action: StandardActionPayload<P>): T => {
       state = nestedReducer(state, action);
 
@@ -159,7 +194,8 @@ export class ReducerBuilder<T> implements IReducerBuilder<T> {
         const handler = this.handlers[type];
         let nextState = handler(state, payload, action);
         if (nextState !== state) {
-          changedMonitor.setChanged(action, this[reducerPathSymbol]);
+          // @ts-ignore
+          this[ctxSymbol].changesMonitor.setChanged(action, this[reducerPathSymbol]);
         }
         state = nextState;
       }

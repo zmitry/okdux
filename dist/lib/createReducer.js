@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var redux_1 = require("redux");
 exports.reducerPathSymbol = Symbol();
-exports.storeSymbol = Symbol();
+exports.ctxSymbol = Symbol();
 var keys = [];
 var action;
 var changedMonitor = {
@@ -16,6 +16,23 @@ var changedMonitor = {
         }
     }
 };
+function makeChangesMonitor() {
+    var keys = [];
+    var action;
+    return {
+        setChanged: function (newAction, key) {
+            if (action !== newAction) {
+                keys = [key];
+                action = newAction;
+            }
+            else {
+                keys.push(key);
+            }
+        },
+        // @ts-ignore
+        getChangedKeys: function () { return keys; }
+    };
+}
 exports.getKeys = function () { return keys; };
 function getProp(object, keys) {
     keys = Array.isArray(keys) ? keys : keys.split(".");
@@ -47,20 +64,34 @@ var identityWithDefault = function (d) { return function (s) {
     return s;
 }; };
 function pruneInitialState(initialState) {
-    return Object.keys(initialState).reduce(function (acc, el) {
+    var acc = { reducers: {}, defaultState: {} };
+    var hasReducers = false;
+    for (var item in initialState) {
+        var el = item;
         if (isReducerBuilder(initialState[el])) {
             acc.reducers[el] = initialState[el].buildReducer();
+            hasReducers = true;
         }
         else if (initialState[el] && initialState[el].getType) {
             var t = initialState[el].getType();
+            hasReducers = true;
             acc.reducers[el] = atomReducer(initialState[el].defaultValue, t);
         }
         else {
             acc.defaultState[el] = initialState[el];
-            acc.reducers[el] = identityWithDefault(initialState[el]);
         }
-        return acc;
-    }, { reducers: {}, defaultState: {} });
+    }
+    if (hasReducers) {
+        for (var el in initialState) {
+            if (!isReducerBuilder(initialState[el]) && !initialState[el].getType) {
+                acc.reducers[el] = identityWithDefault(initialState[el]);
+            }
+        }
+    }
+    else {
+        return { reducers: {}, defaultState: initialState };
+    }
+    return acc;
 }
 var identity = function (d) {
     var _ = [];
@@ -73,7 +104,7 @@ function getDefaultReducer(initialState, _a) {
     var path = _a.path, ctx = _a.ctx;
     var defaultState = initialState;
     var nestedReducer = identity;
-    if (typeof initialState === "object") {
+    if (typeof initialState === "object" && !Array.isArray(initialState)) {
         traverseReducers(initialState, { path: path, ctx: ctx });
         var res = pruneInitialState(initialState);
         if (Object.keys(res.reducers).length !== 0) {
@@ -90,6 +121,7 @@ var ReducerBuilder = /** @class */ (function () {
         this.initialState = initialState;
         this.handlers = {};
         this[_a] = "";
+        this[_b] = {};
         this.select = function (rs) {
             if (_this[exports.reducerPathSymbol]) {
                 return getProp(rs, _this[exports.reducerPathSymbol]);
@@ -134,11 +166,18 @@ var ReducerBuilder = /** @class */ (function () {
         if (path) {
             this[exports.reducerPathSymbol] = path;
         }
+        // @ts-ignore
+        if (!this[exports.ctxSymbol].changesMonitor) {
+            // @ts-ignore
+            this[exports.ctxSymbol].changesMonitor = makeChangesMonitor();
+        }
         var _a = getDefaultReducer(this.initialState, {
             path: this[exports.reducerPathSymbol] || path,
             ctx: {
                 // @ts-ignore
-                addStore: this.addStore
+                addStore: this.addStore,
+                // @ts-ignore
+                changesMonitor: this[exports.ctxSymbol].changesMonitor
             }
         }), defaultState = _a.defaultState, nestedReducer = _a.nestedReducer;
         var reducer = function (state, action) {
@@ -152,7 +191,8 @@ var ReducerBuilder = /** @class */ (function () {
                 var handler = _this.handlers[type];
                 var nextState = handler(state, payload, action);
                 if (nextState !== state) {
-                    changedMonitor.setChanged(action, _this[exports.reducerPathSymbol]);
+                    // @ts-ignore
+                    _this[exports.ctxSymbol].changesMonitor.setChanged(action, _this[exports.reducerPathSymbol]);
                 }
                 state = nextState;
             }
@@ -163,7 +203,7 @@ var ReducerBuilder = /** @class */ (function () {
     };
     return ReducerBuilder;
 }());
-_a = exports.reducerPathSymbol;
+_a = exports.reducerPathSymbol, _b = exports.ctxSymbol;
 exports.ReducerBuilder = ReducerBuilder;
-var _a;
+var _a, _b;
 //# sourceMappingURL=createReducer.js.map

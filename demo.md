@@ -1,10 +1,9 @@
 ```jsx
 import React from "react";
 import { render } from "react-dom";
-import { createAction, createState } from "@kraken97/restate";
+import { createAction, createState, Consumer } from "@kraken97/restate";
 import { createStore } from "redux";
 
-let dispatch;
 const toggleEvent = createAction("toggle");
 const counterEvent = createAction("counter");
 const intensiveCounter = createAction("icounter");
@@ -19,7 +18,7 @@ icounter.on(intensiveCounter, state => state + 1);
 const rootState = createState({ toggle, counter, icounter });
 
 const toggleViewState = rootState
-  .map(state => {
+  .map((state, dispatch) => {
     return state.toggle;
   })
   .map(state => ({
@@ -28,19 +27,17 @@ const toggleViewState = rootState
   }));
 
 const store = createStore(rootState.buildReducer());
-rootState.use(store);
+rootState.use({
+  ...store,
+  context: store.dispatch
+});
 
 dispatch = store.dispatch;
 
-const ToggleConsumer = toggleViewState.getConsumer();
-const ICounterConsumer = icounter.getConsumer();
-
-const CounterConsumer = counter
-  .map(state => ({
-    state: state,
-    inc: () => dispatch(counterEvent())
-  }))
-  .getConsumer();
+const computedCounter = counter.map((state, dispatch) => ({
+  state: state,
+  inc: () => dispatch(counterEvent())
+}));
 function Hello() {
   let renderCount = 0;
   let renderCount2 = 0;
@@ -49,7 +46,7 @@ function Hello() {
   let interval;
   return (
     <React.Fragment>
-      <ICounterConsumer>
+      <Consumer source={icounter}>
         {ctx => {
           return (
             <div>
@@ -77,9 +74,9 @@ function Hello() {
             </div>
           );
         }}
-      </ICounterConsumer>
+      </Consumer>
       <hr />
-      <CounterConsumer>
+      <Consumer source={computedCounter}>
         {ctx => {
           console.log(ctx);
           return (
@@ -92,9 +89,9 @@ function Hello() {
             </div>
           );
         }}
-      </CounterConsumer>
+      </Consumer>
       <hr />
-      <ToggleConsumer>
+      <Consumer source={toggleViewState}>
         {ctx => (
           <div>
             <button onClick={ctx.toggleEvent}>toggle</button>
@@ -104,7 +101,7 @@ function Hello() {
             {"render count: " + ++renderCount}
           </div>
         )}
-      </ToggleConsumer>
+      </Consumer>
     </React.Fragment>
   );
 }
