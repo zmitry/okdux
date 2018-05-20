@@ -12,7 +12,15 @@ yarn add @kraken97/restate
 create state
 
 ```js
-import { createState, createActions, build, local, Consumer } from "@kraken97/restate";
+import React from "react";
+import { render } from "react-dom";
+import {
+  createState,
+  createActions,
+  build,
+  local,
+  Consumer
+} from "@kraken97/restate";
 
 const actions = createActions({
   toggle: build.plain,
@@ -23,8 +31,11 @@ const actions = createActions({
 
 const toggle = createState(true);
 const counter = createState(0);
-const text = createState("");
-text.on(actions, (data, payload) => {
+counter.on(actions.inc, data => {
+  return data + 1;
+});
+const text = createState("text");
+text.on(actions.text, (data, payload) => {
   return payload;
 });
 
@@ -35,24 +46,59 @@ const ui = createState({
 });
 
 const rootState = createState({ toggle, ui });
-rootState.use(local);
 
 const textState = ui.map((el, dispatch) => ({
   t: el.text,
-  setText: text => dispatch(actions.text(text + ".jpg"))
-})); // it will track only changes for text
+  setText: e => dispatch(actions.text(e.target.value.replace(/\s/gi, "")))
+})); // it will track only changes for text after few updates
 
-class List extends React.Component {
+const counterState = ui.map((state, dispatch) => {
+  return {
+    state: state.counter,
+    inc: () => dispatch(actions.inc())
+  };
+});
+const store = rootState.use(local);
+
+store.dispatch({ type: "init" });
+class App extends React.Component {
   render() {
+    let counter1 = 0;
+    let counter2 = 0;
     return (
-      <Consumer source={textState}>
-        {data => {
-          return <div>{data}</div>;
-        }}
-      </Consumer>
+      <div>
+        <Consumer source={textState}>
+          {data => {
+            return (
+              <div>
+                render count{++counter1}
+                <br />
+                <input value={data.t} onChange={data.setText} />;
+              </div>
+            );
+          }}
+        </Consumer>
+        <hr />
+        <Consumer source={counterState}>
+          {data => {
+            console.log(data);
+            return (
+              <div>
+                render count:{++counter2}
+                <br />
+                counter:{data.state}
+                <button onClick={data.inc}>inc</button>
+              </div>
+            );
+          }}
+        </Consumer>
+      </div>
     );
   }
 }
+
+render(<App />, document.getElementById("root"));
+
 ```
 
 # benchmarks
