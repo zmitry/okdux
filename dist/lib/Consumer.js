@@ -15,6 +15,7 @@ var Consumer = /** @class */ (function (_super) {
     __extends(Consumer, _super);
     function Consumer(props) {
         var _this = _super.call(this, props) || this;
+        //@ts-ignore
         _this.state = { currentState: props.source.getState() };
         return _this;
     }

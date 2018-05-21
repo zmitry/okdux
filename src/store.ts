@@ -1,17 +1,40 @@
 import React from "react";
-import { get, intersection, uniq } from "lodash";
+import { get, intersection, uniq, flatten, last } from "lodash";
 import { getKeys, reducerPathSymbol, ctxSymbol } from "./createReducer";
 import { shallowEquals } from "./shallowEquals";
 
+function transformKey(key) {
+  return key.split(".").reduce((acc, el) => {
+    return [...acc, acc.length > 0 ? [last(acc), el].join(".") : el];
+  }, []);
+}
 let trackedFn;
 export function checkKeyUsage(fn, data, context) {
   fn.deps = [];
   trackedFn = fn;
   const result = fn(data, context);
+  walkThrowKeys(result);
   trackedFn = null;
-  const res = [result, fn.deps];
+  const deps = uniq(flatten(fn.deps.map(transformKey)));
+  const res = [result, deps];
   fn.deps = null;
   return res;
+}
+
+function walkThrowKeys(data, key = null) {
+  let keys = [];
+  key && keys.push(key);
+  if (Array.isArray(data)) {
+    return keys;
+  }
+
+  if (typeof data === "object") {
+    for (let i in data) {
+      const res = walkThrowKeys(data[i], (key ? key + "." : "") + i);
+      keys = keys.concat(res);
+    }
+  }
+  return keys;
 }
 
 export function wrapKeys(keys, data) {
@@ -52,7 +75,7 @@ export class Store<T> implements IStore<T> {
   root = false;
   deps = [];
   initialized = false;
-  watchNested = true;
+  watchNested;
 
   getState() {
     return this.currentState;
@@ -100,25 +123,29 @@ export class Store<T> implements IStore<T> {
     this.observers.push(store);
     return store;
   }
-
-  map(fn, shouldWatchNested = true) {
+  // @ts-ignore
+  map(fn, shouldWatchNested) {
     const store = new Store(fn, shouldWatchNested);
     return this.addStore(store);
   }
   set(data, keys) {
     if (this.root) {
+      keys = this.getState() ? keys : walkThrowKeys(data);
       wrapKeys(keys, data);
     }
     const context = this[ctxSymbol] && this[ctxSymbol].context;
     const state = this.getState();
-    let [computedData, deps] = checkKeyUsage(this.selector, data, context);
+    let computedData;
     // @ts-ignore
     if (this.watchNested) {
+      let [cmpData, deps] = checkKeyUsage(this.selector, data, context);
+      computedData = cmpData;
       this.deps = uniq([...this.deps, ...deps]);
-
       if (this.deps.length > 0 && intersection(this.deps, keys).length === 0) {
         return;
       }
+    } else {
+      computedData = this.selector(data);
     }
     if (!shallowEquals(state, computedData)) {
       this.currentState = computedData;

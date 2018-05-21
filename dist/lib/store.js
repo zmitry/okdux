@@ -14,6 +14,13 @@ function checkKeyUsage(fn, data, context) {
     return res;
 }
 exports.checkKeyUsage = checkKeyUsage;
+function walkThrowKeys(data) {
+    if (typeof data === "object") {
+        for (var i in data) {
+            walkThrowKeys(data[i]);
+        }
+    }
+}
 function wrapKeys(keys, data) {
     for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
         var keyPath = keys_1[_i];
@@ -48,7 +55,6 @@ var Store = /** @class */ (function () {
         this.root = false;
         this.deps = [];
         this.initialized = false;
-        this.watchNested = true;
         this.selector = fn;
         this.watchNested = watchNested;
     }
@@ -92,8 +98,8 @@ var Store = /** @class */ (function () {
         this.observers.push(store);
         return store;
     };
+    // @ts-ignore
     Store.prototype.map = function (fn, shouldWatchNested) {
-        if (shouldWatchNested === void 0) { shouldWatchNested = true; }
         var store = new Store(fn, shouldWatchNested);
         return this.addStore(store);
     };

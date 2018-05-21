@@ -3,6 +3,7 @@ import React from "react";
 export class Consumer extends React.Component<any, { currentState: any }> {
   constructor(props) {
     super(props);
+    //@ts-ignore
     this.state = { currentState: props.source.getState() };
   }
   // @ts-ignore

@@ -1,5 +1,5 @@
 import { combineReducers, createStore } from 'redux';
-import { get, intersection, uniq } from 'lodash';
+import { get, intersection, uniq, flatten, last } from 'lodash';
 import React from 'react';
 
 var reducerPathSymbol = Symbol();
@@ -194,6 +194,7 @@ var ReducerBuilder = /** @class */ (function () {
 }());
 _a = reducerPathSymbol, _b = ctxSymbol;
 var _a, _b;
+//# sourceMappingURL=createReducer.js.map
 
 function shallowEquals(a, b) {
     if (Object.is(a, b)) {
@@ -218,16 +219,39 @@ function shallowEquals(a, b) {
     }
     return true;
 }
+//# sourceMappingURL=shallowEquals.js.map
 
+function transformKey(key) {
+    return key.split(".").reduce(function (acc, el) {
+        return acc.concat([acc.length > 0 ? [last(acc), el].join(".") : el]);
+    }, []);
+}
 var trackedFn;
 function checkKeyUsage(fn, data, context) {
     fn.deps = [];
     trackedFn = fn;
     var result = fn(data, context);
+    walkThrowKeys(result);
     trackedFn = null;
-    var res = [result, fn.deps];
+    var deps = uniq(flatten(fn.deps.map(transformKey)));
+    var res = [result, deps];
     fn.deps = null;
     return res;
+}
+function walkThrowKeys(data, key) {
+    if (key === void 0) { key = null; }
+    var keys = [];
+    key && keys.push(key);
+    if (Array.isArray(data)) {
+        return keys;
+    }
+    if (typeof data === "object") {
+        for (var i in data) {
+            var res = walkThrowKeys(data[i], (key ? key + "." : "") + i);
+            keys = keys.concat(res);
+        }
+    }
+    return keys;
 }
 function wrapKeys(keys, data) {
     for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
@@ -262,7 +286,6 @@ var Store = /** @class */ (function () {
         this.root = false;
         this.deps = [];
         this.initialized = false;
-        this.watchNested = true;
         this.selector = fn;
         this.watchNested = watchNested;
     }
@@ -306,24 +329,30 @@ var Store = /** @class */ (function () {
         this.observers.push(store);
         return store;
     };
+    // @ts-ignore
     Store.prototype.map = function (fn, shouldWatchNested) {
-        if (shouldWatchNested === void 0) { shouldWatchNested = true; }
         var store = new Store(fn, shouldWatchNested);
         return this.addStore(store);
     };
     Store.prototype.set = function (data, keys) {
         if (this.root) {
+            keys = this.getState() ? keys : walkThrowKeys(data);
             wrapKeys(keys, data);
         }
         var context = this[ctxSymbol] && this[ctxSymbol].context;
         var state = this.getState();
-        var _a = checkKeyUsage(this.selector, data, context), computedData = _a[0], deps = _a[1];
+        var computedData;
         // @ts-ignore
         if (this.watchNested) {
+            var _a = checkKeyUsage(this.selector, data, context), cmpData = _a[0], deps = _a[1];
+            computedData = cmpData;
             this.deps = uniq(this.deps.concat(deps));
             if (this.deps.length > 0 && intersection(this.deps, keys).length === 0) {
                 return;
             }
+        }
+        else {
+            computedData = this.selector(data);
         }
         if (!shallowEquals(state, computedData)) {
             this.currentState = computedData;
@@ -390,6 +419,7 @@ function createEffects(actions, prefix) {
     // @ts-ignore
     return createActions(actions, prefix);
 }
+//# sourceMappingURL=createAction.js.map
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
@@ -421,6 +451,7 @@ var Consumer = /** @class */ (function (_super) {
     __extends(Consumer, _super);
     function Consumer(props) {
         var _this = _super.call(this, props) || this;
+        //@ts-ignore
         _this.state = { currentState: props.source.getState() };
         return _this;
     }
@@ -444,6 +475,7 @@ var Consumer = /** @class */ (function (_super) {
     };
     return Consumer;
 }(React.Component));
+//# sourceMappingURL=Consumer.js.map
 
 function local(state) {
     var reducer = state.buildReducer();
@@ -452,6 +484,7 @@ function local(state) {
     state.use(store);
     return store;
 }
+//# sourceMappingURL=ministore.js.map
 
 function createState(initialState) {
     if (initialState === undefined) {
@@ -474,5 +507,6 @@ function createState(initialState) {
     // @ts-ignore
     return res2;
 }
+//# sourceMappingURL=index.js.map
 
 export { createState, reducerPathSymbol, ctxSymbol, getKeys, ReducerBuilder, createAction, build, createActions, createEffects, checkKeyUsage, wrapKeys, Store, Consumer, local };

@@ -11,13 +11,13 @@ export declare class Store<T> implements IStore<T> {
     root: boolean;
     deps: any[];
     initialized: boolean;
-    watchNested: boolean;
+    watchNested: any;
     getState(): any;
     subscribe(fn: any): () => any[];
     constructor(fn: (d: any) => any, watchNested: any);
     forEach(fn: any): void;
     use(dataOrFn: any): any;
     addStore(store: any): any;
-    map(fn: any, shouldWatchNested?: boolean): any;
+    map(fn: any, shouldWatchNested: any): any;
     set(data: any, keys: any): void;
 }
