@@ -33,10 +33,7 @@
     "bench": "node --experimental-modules --expose-gc bench/bench.js"
   },
   "lint-staged": {
-    "{src,test}/**/*.tsx?": [
-      "prettier --write --no-semi --single-quote",
-      "git add"
-    ]
+    "{src,test}/**/*.tsx?": ["prettier --write --no-semi --single-quote", "git add"]
   },
   "config": {
     "commitizen": {
@@ -44,7 +41,8 @@
     },
     "validate-commit-msg": {
       "types": "conventional-commit-types",
-      "helpMessage": "Use \"npm run commit\" instead, we use conventional-changelog format :) (https://github.com/commitizen/cz-cli)"
+      "helpMessage":
+        "Use \"npm run commit\" instead, we use conventional-changelog format :) (https://github.com/commitizen/cz-cli)"
     }
   },
   "jest": {
@@ -52,15 +50,8 @@
       ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
     },
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js"
-    ],
-    "coveragePathIgnorePatterns": [
-      "/node_modules/",
-      "/test/"
-    ],
+    "moduleFileExtensions": ["ts", "tsx", "js"],
+    "coveragePathIgnorePatterns": ["/node_modules/", "/test/"],
     "coverageThreshold": {
       "global": {
         "branches": 40,
@@ -107,13 +98,13 @@
     "tslint-config-prettier": "^1.1.0",
     "tslint-config-standard": "^7.0.0",
     "typescript": "^2.8.3",
-    "validate-commit-msg": "^2.12.2"
-  },
-  "dependencies": {
-    "@types/react": "^16.3.14",
+    "validate-commit-msg": "^2.12.2",
     "benchmark": "^2.1.4",
-    "create-subscription": "^16.3.2",
     "proxyequal": "^1.5.2",
     "react-test-renderer": "^16.3.2"
+  },
+  "peerDependencies": {
+    "lodash": "*",
+    "redux": "*"
   }
 }

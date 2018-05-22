@@ -198,6 +198,7 @@
   }());
   _a = reducerPathSymbol, _b = ctxSymbol;
   var _a, _b;
+  //# sourceMappingURL=createReducer.js.map
 
   function shallowEquals(a, b) {
       if (Object.is(a, b)) {
@@ -222,6 +223,7 @@
       }
       return true;
   }
+  //# sourceMappingURL=shallowEquals.js.map
 
   /*! *****************************************************************************
   Copyright (c) Microsoft Corporation. All rights reserved.
@@ -439,6 +441,7 @@
       };
       return ChangesTracker;
   }());
+  //# sourceMappingURL=changesTracker.js.map
 
   var identity$1 = function (d) { return d; };
   var Store = /** @class */ (function () {
@@ -517,7 +520,7 @@
               computedData = this.selector(data, context);
           }
           if (!shallowEquals(state, computedData)) {
-              // this.currentState = computedData;
+              this.currentState = computedData;
               this.reactors.forEach(function (fn) { return fn(computedData); });
               this.observers.forEach(function (el) {
                   el.set(computedData, keys);
@@ -581,6 +584,7 @@
       // @ts-ignore
       return createActions(actions, prefix);
   }
+  //# sourceMappingURL=createAction.js.map
 
   var Consumer = /** @class */ (function (_super) {
       __extends(Consumer, _super);
@@ -610,6 +614,7 @@
       };
       return Consumer;
   }(React.Component));
+  //# sourceMappingURL=Consumer.js.map
 
   function local(state) {
       var reducer = state.buildReducer();
@@ -618,6 +623,7 @@
       state.use(store);
       return store;
   }
+  //# sourceMappingURL=ministore.js.map
 
   function createState(initialState) {
       if (initialState === undefined) {
@@ -640,6 +646,7 @@
       // @ts-ignore
       return res2;
   }
+  //# sourceMappingURL=index.js.map
 
   exports.createState = createState;
   exports.reducerPathSymbol = reducerPathSymbol;

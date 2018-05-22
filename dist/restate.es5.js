@@ -194,6 +194,7 @@ var ReducerBuilder = /** @class */ (function () {
 }());
 _a = reducerPathSymbol, _b = ctxSymbol;
 var _a, _b;
+//# sourceMappingURL=createReducer.js.map
 
 function shallowEquals(a, b) {
     if (Object.is(a, b)) {
@@ -218,6 +219,7 @@ function shallowEquals(a, b) {
     }
     return true;
 }
+//# sourceMappingURL=shallowEquals.js.map
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
@@ -435,6 +437,7 @@ var ChangesTracker = /** @class */ (function () {
     };
     return ChangesTracker;
 }());
+//# sourceMappingURL=changesTracker.js.map
 
 var identity$1 = function (d) { return d; };
 var Store = /** @class */ (function () {
@@ -513,7 +516,7 @@ var Store = /** @class */ (function () {
             computedData = this.selector(data, context);
         }
         if (!shallowEquals(state, computedData)) {
-            // this.currentState = computedData;
+            this.currentState = computedData;
             this.reactors.forEach(function (fn) { return fn(computedData); });
             this.observers.forEach(function (el) {
                 el.set(computedData, keys);
@@ -577,6 +580,7 @@ function createEffects(actions, prefix) {
     // @ts-ignore
     return createActions(actions, prefix);
 }
+//# sourceMappingURL=createAction.js.map
 
 var Consumer = /** @class */ (function (_super) {
     __extends(Consumer, _super);
@@ -606,6 +610,7 @@ var Consumer = /** @class */ (function (_super) {
     };
     return Consumer;
 }(React.Component));
+//# sourceMappingURL=Consumer.js.map
 
 function local(state) {
     var reducer = state.buildReducer();
@@ -614,6 +619,7 @@ function local(state) {
     state.use(store);
     return store;
 }
+//# sourceMappingURL=ministore.js.map
 
 function createState(initialState) {
     if (initialState === undefined) {
@@ -636,5 +642,6 @@ function createState(initialState) {
     // @ts-ignore
     return res2;
 }
+//# sourceMappingURL=index.js.map
 
 export { createState, reducerPathSymbol, ctxSymbol, getKeys, ReducerBuilder, createAction, build, createActions, createEffects, Store, Consumer, local };

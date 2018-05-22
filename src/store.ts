@@ -89,7 +89,7 @@ export class Store<T> implements IStore<T> {
       computedData = this.selector(data, context);
     }
     if (!shallowEquals(state, computedData)) {
-      // this.currentState = computedData;
+      this.currentState = computedData;
       this.reactors.forEach(fn => fn(computedData));
       this.observers.forEach(el => {
         el.set(computedData, keys);

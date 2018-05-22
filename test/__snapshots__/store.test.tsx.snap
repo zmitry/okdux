@@ -15,3 +15,28 @@ Array [
   "d",
 ]
 `;
+
+exports[`restate rerender only needed times 1`] = `
+Array [
+  Array [
+    0,
+  ],
+  Array [
+    1,
+  ],
+  Array [
+    2,
+  ],
+  Array [
+    3,
+  ],
+]
+`;
+
+exports[`restate rerender only needed times 2`] = `
+Array [
+  Array [
+    true,
+  ],
+]
+`;

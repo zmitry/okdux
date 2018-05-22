@@ -125,7 +125,7 @@ describe("restate", () => {
     rootState.map(fn3);
 
     toggleViewState.subscribe(fn1);
-    counter.subscribe(fn2);
+    counter.map(el => el).subscribe(fn2);
 
     store.dispatch({ type: "init" });
 
@@ -135,10 +135,10 @@ describe("restate", () => {
     store.dispatch(counterEvent());
     store.dispatch(counterEvent());
     store.dispatch(counterEvent());
-
     expect(fn1.mock.calls.length).toBe(1);
     expect(fn2.mock.calls.length).toBe(4);
-    // expect(fn3.mock.calls[0][1]).toEqual("hello");
+    expect(fn2.mock.calls).toMatchSnapshot();
+    expect(fn1.mock.calls).toMatchSnapshot();
   });
 
   it("works ok with ministore", () => {
