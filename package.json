@@ -111,7 +111,9 @@
   },
   "dependencies": {
     "@types/react": "^16.3.14",
+    "benchmark": "^2.1.4",
     "create-subscription": "^16.3.2",
+    "proxyequal": "^1.5.2",
     "react-test-renderer": "^16.3.2"
   }
 }

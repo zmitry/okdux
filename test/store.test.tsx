@@ -1,34 +1,52 @@
 import React from "react";
 import { createStore } from "redux";
-import { wrapKeys, checkKeyUsage, Store } from "../src/store";
+import { Store } from "../src/store";
+import { ChangesTracker, checkKeyUsage, wrapKeys, getAllKeys } from "../src/changesTracker";
 import { createState, createAction, Consumer, local } from "../src";
 import Render from "react-test-renderer";
 let mockedData;
 let changedKeys;
 beforeAll(() => {
-  mockedData = { ui: { a: "1" }, users: { password: "" } };
+  mockedData = {
+    ui: { a: { b: 5 } },
+    users: { password: { hash: "", data: "" }, name: "" },
+    ke: { a: 5 },
+    d: 6
+  };
 
   changedKeys = ["ui.a", "users"];
 });
 describe("restate", () => {
-  it("works ok with key check", () => {
-    wrapKeys(changedKeys, mockedData);
-
-    const [_1, deps] = checkKeyUsage(data => {
-      return data.ui.a;
-    }, mockedData);
-    expect(deps).toEqual(["ui", "ui.a"]);
-    const [_2, deps2] = checkKeyUsage(data => {
-      return data.ui;
-    }, mockedData);
-    expect(deps2).toEqual(["ui"]);
-
-    const [_3, deps3] = checkKeyUsage(data => {
-      return { a: data.ui, b: data.users };
-    }, mockedData);
-    expect(deps3).toEqual(["ui", "users"]);
+  it("getAllKeys works correctly", () => {
+    const keys = getAllKeys(mockedData);
+    expect(keys).toMatchSnapshot("getAllKeys");
   });
+  it("changesTracker checks correct deps and track changes correctly", () => {
+    wrapKeys(getAllKeys(mockedData), mockedData);
+    const changesTracker = new ChangesTracker();
 
+    changesTracker.compute(() => {
+      return [mockedData.ui.a, mockedData.users.name];
+    });
+
+    changesTracker.compute(() => {
+      let users = mockedData.users;
+      return [mockedData.ui.a, users, mockedData.users.name];
+    });
+
+    expect(changesTracker.trackedDependencies).toEqual(["ui", "ui.a", "users", "users.name"]);
+    expect(changesTracker.nestedTrackedDependencies).toEqual(["ui.a", "users"]);
+
+    expect(changesTracker.hasChanges(["ui"])).toBeTruthy();
+    expect(changesTracker.hasChanges(["ui.a.qwer"])).toBeTruthy();
+    expect(changesTracker.hasChanges(["users"])).toBeTruthy();
+    expect(changesTracker.hasChanges(["users.kek"])).toBeTruthy();
+    expect(changesTracker.hasChanges(["otherkey"])).toBeFalsy();
+    expect(changesTracker.hasChanges(["ui.data"])).toBeFalsy();
+    changesTracker.clearObservedKeys();
+    expect(changesTracker.trackedDependencies).toEqual([]);
+    expect(changesTracker.nestedTrackedDependencies).toEqual([]);
+  });
   it("works ok with store", () => {
     const store = new Store();
     const newData = { ui: { a: "5" }, users: { password: "5dsf", name: "qwer" } };
@@ -86,10 +104,15 @@ describe("restate", () => {
           toggle: { a: { c: state.toggle } }
         };
       })
-      .map(el => ({
-        state: el,
-        toggleEvent: e => dispatch(toggleEvent(e))
-      }));
+      .map(
+        el => (
+          {
+            state: el,
+            toggleEvent: e => dispatch(toggleEvent(e))
+          },
+          true
+        )
+      );
     rootState.use({
       getState: store.getState,
       subscribe: store.subscribe,
@@ -113,7 +136,7 @@ describe("restate", () => {
     store.dispatch(counterEvent());
     store.dispatch(counterEvent());
 
-    expect(fn1.mock.calls.length).toBe(2);
+    expect(fn1.mock.calls.length).toBe(1);
     expect(fn2.mock.calls.length).toBe(4);
     // expect(fn3.mock.calls[0][1]).toEqual("hello");
   });
@@ -132,12 +155,8 @@ describe("restate", () => {
     state2.on(e2, (_, p) => p);
     const common = createState({ state, state2 });
 
-    state2.subscribe(data => {
-      console.log("e2", data);
-    });
-    state.subscribe(() => {
-      console.log("e1");
-    });
+    state2.subscribe(data => {});
+    state.subscribe(() => {});
     const st = common.use(local);
 
     st.dispatch(e());

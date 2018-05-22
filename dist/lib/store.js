@@ -1,51 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var lodash_1 = require("lodash");
 var createReducer_1 = require("./createReducer");
 var shallowEquals_1 = require("./shallowEquals");
-var trackedFn;
-function checkKeyUsage(fn, data, context) {
-    fn.deps = [];
-    trackedFn = fn;
-    var result = fn(data, context);
-    trackedFn = null;
-    var res = [result, fn.deps];
-    fn.deps = null;
-    return res;
-}
-exports.checkKeyUsage = checkKeyUsage;
-function walkThrowKeys(data) {
-    if (typeof data === "object") {
-        for (var i in data) {
-            walkThrowKeys(data[i]);
-        }
-    }
-}
-function wrapKeys(keys, data) {
-    for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
-        var keyPath = keys_1[_i];
-        var path = keyPath.split(".");
-        // eslint-disable-next-line
-        path.reduce(function (parent, prop) {
-            var obj = lodash_1.get(data, parent, data) || data;
-            var valueProp = obj[prop];
-            var pathToProp = parent.concat([prop]);
-            if (typeof obj !== "object") {
-                return pathToProp;
-            }
-            Reflect.defineProperty(obj, prop, {
-                configurable: true,
-                enumerable: true,
-                get: function () {
-                    trackedFn && trackedFn.deps.push(pathToProp.join("."));
-                    return valueProp;
-                }
-            });
-            return pathToProp;
-        }, []);
-    }
-}
-exports.wrapKeys = wrapKeys;
+var changesTracker_1 = require("./changesTracker");
 var identity = function (d) { return d; };
 var Store = /** @class */ (function () {
     function Store(fn, watchNested) {
@@ -53,7 +10,6 @@ var Store = /** @class */ (function () {
         this.reactors = [];
         this.observers = [];
         this.root = false;
-        this.deps = [];
         this.initialized = false;
         this.selector = fn;
         this.watchNested = watchNested;
@@ -62,9 +18,6 @@ var Store = /** @class */ (function () {
         return this.currentState;
     };
     Store.prototype.subscribe = function (fn) {
-        // if (!this.initialized) {
-        //   this.use(local);
-        // }
         var _this = this;
         this.reactors.push(fn);
         return function () { return _this.reactors.filter(function (el) { return !fn; }); };
@@ -104,21 +57,30 @@ var Store = /** @class */ (function () {
         return this.addStore(store);
     };
     Store.prototype.set = function (data, keys) {
+        var _this = this;
         if (this.root) {
-            wrapKeys(keys, data);
+            keys = this.getState() ? keys : changesTracker_1.getAllKeys(data);
+            changesTracker_1.wrapKeys(keys, data);
         }
         var context = this[createReducer_1.ctxSymbol] && this[createReducer_1.ctxSymbol].context;
         var state = this.getState();
-        var _a = checkKeyUsage(this.selector, data, context), computedData = _a[0], deps = _a[1];
+        var computedData;
         // @ts-ignore
         if (this.watchNested) {
-            this.deps = lodash_1.uniq(this.deps.concat(deps));
-            if (this.deps.length > 0 && lodash_1.intersection(this.deps, keys).length === 0) {
+            if (!this.changesTracker) {
+                this.changesTracker = new changesTracker_1.ChangesTracker();
+            }
+            var fn = function () { return _this.selector(data, context); };
+            computedData = this.changesTracker.compute(fn);
+            if (!this.changesTracker.hasChanges(keys)) {
                 return;
             }
         }
+        else {
+            computedData = this.selector(data, context);
+        }
         if (!shallowEquals_1.shallowEquals(state, computedData)) {
-            this.currentState = computedData;
+            // this.currentState = computedData;
             this.reactors.forEach(function (fn) { return fn(computedData); });
             this.observers.forEach(function (el) {
                 el.set(computedData, keys);

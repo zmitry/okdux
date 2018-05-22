@@ -39,6 +39,7 @@ function generateDraft() {
   }
   return draft;
 }
+module.exports.generateDraft = generateDraft;
 // Produce the frozen bazeState
 // frozenBazeState = deepFreeze(cloneDeep(baseState))
 
@@ -186,6 +187,8 @@ test("restate x", prepared => {
     return newDraft;
   });
 
+  effectorStore.map(el => el[0]);
+
   effectorStore.subscribe(data => {});
   const store = effectorStore.use(local);
   prepared();
@@ -194,15 +197,27 @@ test("restate x", prepared => {
   return effectorStore.getState();
 });
 
-// test('immer (proxy) - with autofreeze', () => {
-//  setUseProxies(true)
-//  setAutoFreeze(true)
-//  produce(frozenBazeState, draft => {
-//   for (let i = 0; i < MAX * MODIFY_FACTOR; i++) {
-//    draft[i].done = true
-//   }
-//  })
-// })
+const { proxyState, proxyEqual, proxyShallow } = require("proxyequal");
+
+// wrap the original state
+const state = () => ({ a: generateDraft(), b: generateDraft(), c: generateDraft() });
+test("proxy", () => {
+  const trapped = proxyState(state());
+});
+const redux = require("redux");
+test("redux", prepared => {
+  const reducer = (draft = generateDraft()) => {
+    const newDraft = draft.concat([]);
+    for (let i = 0; i < MAX * MODIFY_FACTOR; i++) {
+      newDraft[i] = Object.assign({}, newDraft[i], { done: true });
+    }
+    return newDraft;
+  };
+  const store = redux.createStore(reducer);
+  store.subscribe(() => {});
+  prepared();
+  store.dispatch({ type: "init" });
+});
 
 // test('immer (es5) - without autofreeze', () => {
 //  setUseProxies(false)

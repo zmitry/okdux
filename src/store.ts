@@ -2,70 +2,12 @@ import React from "react";
 import { get, intersection, uniq, flatten, last } from "lodash";
 import { getKeys, reducerPathSymbol, ctxSymbol } from "./createReducer";
 import { shallowEquals } from "./shallowEquals";
-
-function transformKey(key) {
-  return key.split(".").reduce((acc, el) => {
-    return [...acc, acc.length > 0 ? [last(acc), el].join(".") : el];
-  }, []);
-}
-let trackedFn;
-export function checkKeyUsage(fn, data, context) {
-  fn.deps = [];
-  trackedFn = fn;
-  const result = fn(data, context);
-  walkThrowKeys(result);
-  trackedFn = null;
-  const deps = uniq(flatten(fn.deps.map(transformKey)));
-  const res = [result, deps];
-  fn.deps = null;
-  return res;
-}
-
-function walkThrowKeys(data, key = null) {
-  let keys = [];
-  key && keys.push(key);
-  if (Array.isArray(data)) {
-    return keys;
-  }
-
-  if (typeof data === "object") {
-    for (let i in data) {
-      const res = walkThrowKeys(data[i], (key ? key + "." : "") + i);
-      keys = keys.concat(res);
-    }
-  }
-  return keys;
-}
-
-export function wrapKeys(keys, data) {
-  for (let keyPath of keys) {
-    const path = keyPath.split(".");
-    // eslint-disable-next-line
-    path.reduce((parent, prop) => {
-      const obj = get(data, parent, data) || data;
-      const valueProp = obj[prop];
-      const pathToProp = [...parent, prop];
-      if (typeof obj !== "object") {
-        return pathToProp;
-      }
-      Reflect.defineProperty(obj, prop, {
-        configurable: true,
-        enumerable: true,
-        get() {
-          trackedFn && trackedFn.deps.push(pathToProp.join("."));
-          return valueProp;
-        }
-      });
-      return pathToProp;
-    }, []);
-  }
-}
-
-const identity = d => d;
+import { ChangesTracker, getAllKeys, wrapKeys } from "./changesTracker";
 
 export interface IStore<T> {
   map: <P>(fn: (data: T, ctx: any) => P) => IStore<P>;
 }
+const identity = d => d;
 
 export class Store<T> implements IStore<T> {
   reactors = [];
@@ -73,19 +15,15 @@ export class Store<T> implements IStore<T> {
   selector;
   currentState;
   root = false;
-  deps = [];
   initialized = false;
   watchNested;
+  changesTracker: ChangesTracker;
 
   getState() {
     return this.currentState;
   }
 
   subscribe(fn) {
-    // if (!this.initialized) {
-    //   this.use(local);
-    // }
-
     this.reactors.push(fn);
     return () => this.reactors.filter(el => !fn);
   }
@@ -130,7 +68,7 @@ export class Store<T> implements IStore<T> {
   }
   set(data, keys) {
     if (this.root) {
-      keys = this.getState() ? keys : walkThrowKeys(data);
+      keys = this.getState() ? keys : getAllKeys(data);
       wrapKeys(keys, data);
     }
     const context = this[ctxSymbol] && this[ctxSymbol].context;
@@ -138,17 +76,20 @@ export class Store<T> implements IStore<T> {
     let computedData;
     // @ts-ignore
     if (this.watchNested) {
-      let [cmpData, deps] = checkKeyUsage(this.selector, data, context);
-      computedData = cmpData;
-      this.deps = uniq([...this.deps, ...deps]);
-      if (this.deps.length > 0 && intersection(this.deps, keys).length === 0) {
+      if (!this.changesTracker) {
+        this.changesTracker = new ChangesTracker();
+      }
+      const fn = () => this.selector(data, context);
+
+      computedData = this.changesTracker.compute(fn);
+      if (!this.changesTracker.hasChanges(keys)) {
         return;
       }
     } else {
-      computedData = this.selector(data);
+      computedData = this.selector(data, context);
     }
     if (!shallowEquals(state, computedData)) {
-      this.currentState = computedData;
+      // this.currentState = computedData;
       this.reactors.forEach(fn => fn(computedData));
       this.observers.forEach(el => {
         el.set(computedData, keys);

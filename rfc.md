@@ -117,3 +117,34 @@ class List extends React.Component {
   }
 }
 ```
+
+```js
+rootState
+  .map(state => {
+    const policyState = policiesRootState.select(state);
+    const selectedMachines = MachineState.ui.select(state).selectedMachines;
+    return {
+      selectedMachines,
+      ui: policyState.ui,
+      actions: policyState.actions,
+      entities: policyState.entities
+    };
+  })
+  .compute(
+    {
+      selectedPolicies: policyGetters.getSelectedPolicies,
+      policiesWithFilters: policyGetters.getAllPoliciesWithFilters,
+      easyUiPolicies: policyGetters.getEasyUiPolicies,
+      activePoliciesSet: MachineState.machineGetters.getActivePolicies
+    },
+    data => data
+  );
+```
+
+```
+compose(st, st2, st3, (st1,st2,st,3)=> {
+  return {
+
+  }
+})
+```

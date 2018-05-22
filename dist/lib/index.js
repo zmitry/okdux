@@ -198,7 +198,6 @@
   }());
   _a = reducerPathSymbol, _b = ctxSymbol;
   var _a, _b;
-  //# sourceMappingURL=createReducer.js.map
 
   function shallowEquals(a, b) {
       if (Object.is(a, b)) {
@@ -223,26 +222,93 @@
       }
       return true;
   }
-  //# sourceMappingURL=shallowEquals.js.map
 
-  function transformKey(key) {
-      return key.split(".").reduce(function (acc, el) {
-          return acc.concat([acc.length > 0 ? [lodash.last(acc), el].join(".") : el]);
-      }, []);
+  /*! *****************************************************************************
+  Copyright (c) Microsoft Corporation. All rights reserved.
+  Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+  this file except in compliance with the License. You may obtain a copy of the
+  License at http://www.apache.org/licenses/LICENSE-2.0
+
+  THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+  WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+  MERCHANTABLITY OR NON-INFRINGEMENT.
+
+  See the Apache Version 2.0 License for specific language governing permissions
+  and limitations under the License.
+  ***************************************************************************** */
+  /* global Reflect, Promise */
+
+  var extendStatics = Object.setPrototypeOf ||
+      ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+      function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+
+  function __extends(d, b) {
+      extendStatics(d, b);
+      function __() { this.constructor = d; }
+      d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
   }
+
+  function __values(o) {
+      var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
+      if (m) return m.call(o);
+      return {
+          next: function () {
+              if (o && i >= o.length) o = void 0;
+              return { value: o && o[i++], done: !o };
+          }
+      };
+  }
+
+  function __read(o, n) {
+      var m = typeof Symbol === "function" && o[Symbol.iterator];
+      if (!m) return o;
+      var i = m.call(o), r, ar = [], e;
+      try {
+          while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+      }
+      catch (error) { e = { error: error }; }
+      finally {
+          try {
+              if (r && !r.done && (m = i["return"])) m.call(i);
+          }
+          finally { if (e) throw e.error; }
+      }
+      return ar;
+  }
+
+  function __spread() {
+      for (var ar = [], i = 0; i < arguments.length; i++)
+          ar = ar.concat(__read(arguments[i]));
+      return ar;
+  }
+
   var trackedFn;
-  function checkKeyUsage(fn, data, context) {
+  function buildNestedKeys(trackedNested) {
+      var res = trackedNested.reduce(function (acc, el) {
+          var path = el.split(".");
+          path.pop();
+          var key = path.join(".");
+          acc.add(key);
+          return acc;
+      }, new Set());
+      return res;
+  }
+  function checkKeyUsage(fn) {
       fn.deps = [];
       trackedFn = fn;
-      var result = fn(data, context);
+      var result = fn();
+      var exactTrack = fn.deps;
+      fn.deps = [];
       walkThrowKeys(result);
+      var trackedKeys = fn.deps;
+      var trackNestedKeys = buildNestedKeys(trackedKeys);
+      var res = [result, exactTrack, trackNestedKeys];
       trackedFn = null;
-      var deps = lodash.uniq(lodash.flatten(fn.deps.map(transformKey)));
-      var res = [result, deps];
       fn.deps = null;
       return res;
   }
-  function walkThrowKeys(data, key) {
+  function getAllKeys(data, key) {
       if (key === void 0) { key = null; }
       var keys = [];
       key && keys.push(key);
@@ -251,36 +317,129 @@
       }
       if (typeof data === "object") {
           for (var i in data) {
-              var res = walkThrowKeys(data[i], (key ? key + "." : "") + i);
+              var res = getAllKeys(data[i], (key ? key + "." : "") + i);
               keys = keys.concat(res);
           }
       }
       return keys;
   }
-  function wrapKeys(keys, data) {
-      for (var _i = 0, keys_1 = keys; _i < keys_1.length; _i++) {
-          var keyPath = keys_1[_i];
-          var path = keyPath.split(".");
-          // eslint-disable-next-line
-          path.reduce(function (parent, prop) {
-              var obj = lodash.get(data, parent, data) || data;
-              var valueProp = obj[prop];
-              var pathToProp = parent.concat([prop]);
-              if (typeof obj !== "object") {
-                  return pathToProp;
+  var SKIP_WALK_AFTER = 20;
+  function walkThrowKeys(data, key) {
+      if (key === void 0) { key = null; }
+      if (typeof data === "object") {
+          var counter = 0;
+          for (var i in data) {
+              if (++counter > SKIP_WALK_AFTER) {
+                  break;
               }
-              Reflect.defineProperty(obj, prop, {
-                  configurable: true,
-                  enumerable: true,
-                  get: function () {
-                      trackedFn && trackedFn.deps.push(pathToProp.join("."));
-                      return valueProp;
-                  }
-              });
-              return pathToProp;
-          }, []);
+              var prevLen = trackedFn.deps.length;
+              var el = data[i];
+              var nextLen = trackedFn.deps.length;
+              if (prevLen !== nextLen) {
+                  continue;
+              }
+              walkThrowKeys(el);
+          }
       }
   }
+  function wrapKeys(keys, data) {
+      try {
+          for (var keys_1 = __values(keys), keys_1_1 = keys_1.next(); !keys_1_1.done; keys_1_1 = keys_1.next()) {
+              var keyPath = keys_1_1.value;
+              var path = keyPath.split(".");
+              // eslint-disable-next-line
+              path.reduce(function (parent, prop) {
+                  var obj = lodash.get(data, parent, data) || data;
+                  var valueProp = obj[prop];
+                  var pathToProp = __spread(parent, [prop]);
+                  if (typeof obj !== "object") {
+                      return pathToProp;
+                  }
+                  Reflect.defineProperty(obj, prop, {
+                      configurable: true,
+                      enumerable: true,
+                      get: function () {
+                          trackedFn && trackedFn.deps.push(pathToProp.join("."));
+                          return valueProp;
+                      }
+                  });
+                  return pathToProp;
+              }, []);
+          }
+      }
+      catch (e_1_1) { e_1 = { error: e_1_1 }; }
+      finally {
+          try {
+              if (keys_1_1 && !keys_1_1.done && (_a = keys_1.return)) _a.call(keys_1);
+          }
+          finally { if (e_1) throw e_1.error; }
+      }
+      var e_1, _a;
+  }
+  var ChangesTracker = /** @class */ (function () {
+      function ChangesTracker() {
+          this.trackedDeps = new Set();
+          this.trackedNestedDeps = new Set();
+      }
+      ChangesTracker.hasNestedChanges = function (nestedKeysToTrack, changedKeys) {
+          var hasChanges = false;
+          var _loop_1 = function (item) {
+              var res = changedKeys.find(function (key) { return key.startsWith(item); });
+              if (res) {
+                  hasChanges = true;
+                  return "break";
+              }
+          };
+          try {
+              for (var nestedKeysToTrack_1 = __values(nestedKeysToTrack), nestedKeysToTrack_1_1 = nestedKeysToTrack_1.next(); !nestedKeysToTrack_1_1.done; nestedKeysToTrack_1_1 = nestedKeysToTrack_1.next()) {
+                  var item = nestedKeysToTrack_1_1.value;
+                  var state_1 = _loop_1(item);
+                  if (state_1 === "break")
+                      break;
+              }
+          }
+          catch (e_2_1) { e_2 = { error: e_2_1 }; }
+          finally {
+              try {
+                  if (nestedKeysToTrack_1_1 && !nestedKeysToTrack_1_1.done && (_a = nestedKeysToTrack_1.return)) _a.call(nestedKeysToTrack_1);
+              }
+              finally { if (e_2) throw e_2.error; }
+          }
+          return hasChanges;
+          var e_2, _a;
+      };
+      Object.defineProperty(ChangesTracker.prototype, "trackedDependencies", {
+          get: function () {
+              return __spread(this.trackedDeps);
+          },
+          enumerable: true,
+          configurable: true
+      });
+      Object.defineProperty(ChangesTracker.prototype, "nestedTrackedDependencies", {
+          get: function () {
+              return __spread(this.trackedNestedDeps);
+          },
+          enumerable: true,
+          configurable: true
+      });
+      ChangesTracker.prototype.compute = function (fn) {
+          var _this = this;
+          var _a = __read(checkKeyUsage(fn), 3), cmpData = _a[0], deps = _a[1], nested = _a[2];
+          deps.forEach(function (el) { return _this.trackedDeps.add(el); });
+          nested.forEach(function (el) { return _this.trackedNestedDeps.add(el); });
+          return cmpData;
+      };
+      ChangesTracker.prototype.clearObservedKeys = function () {
+          this.trackedDeps.clear();
+          this.trackedNestedDeps.clear();
+      };
+      ChangesTracker.prototype.hasChanges = function (changedKeys) {
+          return (lodash.intersection(this.trackedDependencies, changedKeys).length > 0 ||
+              ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys));
+      };
+      return ChangesTracker;
+  }());
+
   var identity$1 = function (d) { return d; };
   var Store = /** @class */ (function () {
       function Store(fn, watchNested) {
@@ -288,7 +447,6 @@
           this.reactors = [];
           this.observers = [];
           this.root = false;
-          this.deps = [];
           this.initialized = false;
           this.selector = fn;
           this.watchNested = watchNested;
@@ -297,9 +455,6 @@
           return this.currentState;
       };
       Store.prototype.subscribe = function (fn) {
-          // if (!this.initialized) {
-          //   this.use(local);
-          // }
           var _this = this;
           this.reactors.push(fn);
           return function () { return _this.reactors.filter(function (el) { return !fn; }); };
@@ -339,8 +494,9 @@
           return this.addStore(store);
       };
       Store.prototype.set = function (data, keys) {
+          var _this = this;
           if (this.root) {
-              keys = this.getState() ? keys : walkThrowKeys(data);
+              keys = this.getState() ? keys : getAllKeys(data);
               wrapKeys(keys, data);
           }
           var context = this[ctxSymbol] && this[ctxSymbol].context;
@@ -348,18 +504,20 @@
           var computedData;
           // @ts-ignore
           if (this.watchNested) {
-              var _a = checkKeyUsage(this.selector, data, context), cmpData = _a[0], deps = _a[1];
-              computedData = cmpData;
-              this.deps = lodash.uniq(this.deps.concat(deps));
-              if (this.deps.length > 0 && lodash.intersection(this.deps, keys).length === 0) {
+              if (!this.changesTracker) {
+                  this.changesTracker = new ChangesTracker();
+              }
+              var fn = function () { return _this.selector(data, context); };
+              computedData = this.changesTracker.compute(fn);
+              if (!this.changesTracker.hasChanges(keys)) {
                   return;
               }
           }
           else {
-              computedData = this.selector(data);
+              computedData = this.selector(data, context);
           }
           if (!shallowEquals(state, computedData)) {
-              this.currentState = computedData;
+              // this.currentState = computedData;
               this.reactors.forEach(function (fn) { return fn(computedData); });
               this.observers.forEach(function (el) {
                   el.set(computedData, keys);
@@ -423,33 +581,6 @@
       // @ts-ignore
       return createActions(actions, prefix);
   }
-  //# sourceMappingURL=createAction.js.map
-
-  /*! *****************************************************************************
-  Copyright (c) Microsoft Corporation. All rights reserved.
-  Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-  this file except in compliance with the License. You may obtain a copy of the
-  License at http://www.apache.org/licenses/LICENSE-2.0
-
-  THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-  KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
-  WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
-  MERCHANTABLITY OR NON-INFRINGEMENT.
-
-  See the Apache Version 2.0 License for specific language governing permissions
-  and limitations under the License.
-  ***************************************************************************** */
-  /* global Reflect, Promise */
-
-  var extendStatics = Object.setPrototypeOf ||
-      ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-      function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-
-  function __extends(d, b) {
-      extendStatics(d, b);
-      function __() { this.constructor = d; }
-      d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-  }
 
   var Consumer = /** @class */ (function (_super) {
       __extends(Consumer, _super);
@@ -479,7 +610,6 @@
       };
       return Consumer;
   }(React.Component));
-  //# sourceMappingURL=Consumer.js.map
 
   function local(state) {
       var reducer = state.buildReducer();
@@ -488,7 +618,6 @@
       state.use(store);
       return store;
   }
-  //# sourceMappingURL=ministore.js.map
 
   function createState(initialState) {
       if (initialState === undefined) {
@@ -511,7 +640,6 @@
       // @ts-ignore
       return res2;
   }
-  //# sourceMappingURL=index.js.map
 
   exports.createState = createState;
   exports.reducerPathSymbol = reducerPathSymbol;
@@ -522,8 +650,6 @@
   exports.build = build;
   exports.createActions = createActions;
   exports.createEffects = createEffects;
-  exports.checkKeyUsage = checkKeyUsage;
-  exports.wrapKeys = wrapKeys;
   exports.Store = Store;
   exports.Consumer = Consumer;
   exports.local = local;

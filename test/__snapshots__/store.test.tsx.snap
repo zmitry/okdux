@@ -1,0 +1,17 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`restate getAllKeys works correctly: getAllKeys 1`] = `
+Array [
+  "ui",
+  "ui.a",
+  "ui.a.b",
+  "users",
+  "users.password",
+  "users.password.hash",
+  "users.password.data",
+  "users.name",
+  "ke",
+  "ke.a",
+  "d",
+]
+`;

@@ -1,5 +1,4 @@
-export declare function checkKeyUsage(fn: any, data: any, context: any): any[];
-export declare function wrapKeys(keys: any, data: any): void;
+import { ChangesTracker } from "./changesTracker";
 export interface IStore<T> {
     map: <P>(fn: (data: T, ctx: any) => P) => IStore<P>;
 }
@@ -9,9 +8,9 @@ export declare class Store<T> implements IStore<T> {
     selector: any;
     currentState: any;
     root: boolean;
-    deps: any[];
     initialized: boolean;
     watchNested: any;
+    changesTracker: ChangesTracker;
     getState(): any;
     subscribe(fn: any): () => any[];
     constructor(fn: (d: any) => any, watchNested: any);
