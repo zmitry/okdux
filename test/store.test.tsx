@@ -47,6 +47,57 @@ describe("restate", () => {
     expect(changesTracker.trackedDependencies).toEqual([]);
     expect(changesTracker.nestedTrackedDependencies).toEqual([]);
   });
+
+  it("calculates computed", () => {
+    const inc = createAction("inc");
+    const set = createAction("text");
+
+    const counter = createState(1);
+    counter.on(inc, state => state + 1);
+    const text = createState("hello");
+    text.on(set, (data, ev) => data + ev);
+    const root = createState({ text, counter });
+    const store = root.use(local);
+    const fn1 = jest.fn();
+    const fn2 = jest.fn();
+
+    const compute1 = data => {
+      fn1(data);
+      return data.text + data.counter;
+    };
+    const compute2 = data => {
+      fn2(data);
+      return data.text + Math.random();
+    };
+
+    const computation = root.compute({
+      msg: compute1,
+      msg2: compute2
+    });
+    const clear = () => {
+      fn1.mockClear();
+      fn2.mockClear();
+    };
+    const subs = jest.fn();
+    computation
+      .map(el => {
+        return el.msg2;
+      })
+      .subscribe(el => console.log("cmp", el));
+    computation.subscribe(subs);
+    store.dispatch(inc());
+    expect(fn1).toBeCalled();
+    expect(fn2.mock.calls.length).toBe(1);
+    clear();
+    store.dispatch(inc());
+    expect(fn1).toBeCalled();
+    expect(fn2.mock.calls.length).toBe(0);
+    store.dispatch(set("qwer"));
+    expect(fn1).toBeCalled();
+    expect(fn2).toBeCalled();
+
+    console.log(subs.mock.calls);
+  });
   it("works ok with store", () => {
     const store = new Store();
     const newData = { ui: { a: "5" }, users: { password: "5dsf", name: "qwer" } };

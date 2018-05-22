@@ -14,6 +14,9 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> & IStore<
   const res2 = Object.assign(res, {
     use: store.use.bind(res),
     set: store.set.bind(res),
+    run: store.run.bind(res),
+    handleChanged: store.handleChanged.bind(res),
+    compute: store.compute.bind(res),
     addStore: store.addStore.bind(res),
     map: store.map.bind(res),
     getState: store.getState.bind(res),

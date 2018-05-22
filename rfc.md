@@ -137,7 +137,7 @@ rootState
       easyUiPolicies: policyGetters.getEasyUiPolicies,
       activePoliciesSet: MachineState.machineGetters.getActivePolicies
     },
-    data => data
+    data => ({})
   );
 ```
 

@@ -5,18 +5,6 @@ import { Store } from ".";
 export const reducerPathSymbol = Symbol();
 export const ctxSymbol = Symbol();
 
-let keys = [];
-let action;
-const changedMonitor = {
-  setChanged: (newAction, key) => {
-    if (action !== newAction) {
-      keys = [key];
-      action = newAction;
-    } else {
-      keys.push(key);
-    }
-  }
-};
 function makeChangesMonitor() {
   let keys = [];
   let action;
@@ -34,7 +22,6 @@ function makeChangesMonitor() {
   };
 }
 
-export const getKeys = () => keys;
 function getProp(object, keys) {
   keys = Array.isArray(keys) ? keys : keys.split(".");
   object = object[keys[0]];

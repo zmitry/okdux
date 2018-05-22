@@ -1,6 +1,6 @@
 import React from "react";
 import { get, intersection, uniq, flatten, last } from "lodash";
-import { getKeys, reducerPathSymbol, ctxSymbol } from "./createReducer";
+import { reducerPathSymbol, ctxSymbol } from "./createReducer";
 
 let trackedFn;
 
@@ -134,6 +134,9 @@ export class ChangesTracker {
   }
 
   public hasChanges(changedKeys) {
+    if (this.trackedDependencies.length === 0) {
+      return true;
+    }
     return (
       intersection(this.trackedDependencies, changedKeys).length > 0 ||
       ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys)

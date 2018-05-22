@@ -4,7 +4,6 @@ import React from 'react';
 
 var reducerPathSymbol = Symbol();
 var ctxSymbol = Symbol();
-var keys = [];
 function makeChangesMonitor() {
     var keys = [];
     var action;
@@ -22,7 +21,6 @@ function makeChangesMonitor() {
         getChangedKeys: function () { return keys; }
     };
 }
-var getKeys = function () { return keys; };
 function getProp(object, keys) {
     keys = Array.isArray(keys) ? keys : keys.split(".");
     object = object[keys[0]];
@@ -194,7 +192,6 @@ var ReducerBuilder = /** @class */ (function () {
 }());
 _a = reducerPathSymbol, _b = ctxSymbol;
 var _a, _b;
-//# sourceMappingURL=createReducer.js.map
 
 function shallowEquals(a, b) {
     if (Object.is(a, b)) {
@@ -219,7 +216,6 @@ function shallowEquals(a, b) {
     }
     return true;
 }
-//# sourceMappingURL=shallowEquals.js.map
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
@@ -432,23 +428,66 @@ var ChangesTracker = /** @class */ (function () {
         this.trackedNestedDeps.clear();
     };
     ChangesTracker.prototype.hasChanges = function (changedKeys) {
+        if (this.trackedDependencies.length === 0) {
+            return true;
+        }
         return (intersection(this.trackedDependencies, changedKeys).length > 0 ||
             ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys));
     };
     return ChangesTracker;
 }());
-//# sourceMappingURL=changesTracker.js.map
 
 var identity$1 = function (d) { return d; };
+var TYPES = {
+    SINGLE_SHALLOW: 1,
+    SINGLE_TRACK: 2,
+    MULTI_TRACK: 3
+};
+var MultiTrack = /** @class */ (function () {
+    function MultiTrack(_a) {
+        var map = _a.map, _b = _a.mix, mix = _b === void 0 ? identity$1 : _b;
+        var _this = this;
+        this.trackers = {};
+        this.values = {};
+        this.map = map;
+        this.mix = mix;
+        Object.keys(map).forEach(function (el) {
+            _this.trackers[el] = new ChangesTracker();
+        });
+        this.keys = Object.keys(map);
+    }
+    MultiTrack.prototype.compute = function (data, changedKeys) {
+        var _this = this;
+        var res = this.keys.reduce(function (acc, el) {
+            var fn = _this.map[el];
+            if (_this.trackers[el].hasChanges(changedKeys)) {
+                var value = _this.trackers[el].compute(function () { return fn(data, acc); });
+                acc[el] = value;
+                _this.values[el] = value;
+            }
+            return acc;
+        }, Object.assign({}, this.values, this.mix(data)));
+        return res;
+    };
+    return MultiTrack;
+}());
 var Store = /** @class */ (function () {
-    function Store(fn, watchNested) {
-        if (fn === void 0) { fn = identity$1; }
+    function Store(data, type) {
         this.reactors = [];
         this.observers = [];
         this.root = false;
         this.initialized = false;
-        this.selector = fn;
-        this.watchNested = watchNested;
+        this.type = TYPES.SINGLE_SHALLOW;
+        this.type = type;
+        if (type === TYPES.MULTI_TRACK) {
+            this.computed = new MultiTrack(data);
+        }
+        else if (type === TYPES.SINGLE_TRACK) {
+            this.changesTracker = new ChangesTracker();
+        }
+        else {
+            this.selector = data || identity$1;
+        }
     }
     Store.prototype.getState = function () {
         return this.currentState;
@@ -477,51 +516,65 @@ var Store = /** @class */ (function () {
             el[ctxSymbol] = _this[ctxSymbol];
             el.initialized = true;
         });
-        var getKeys$$1 = this[ctxSymbol].changesMonitor.getChangedKeys;
+        var getKeys = this[ctxSymbol].changesMonitor.getChangedKeys;
         subscribe(function () {
-            _this.set(getState(), getKeys$$1());
+            _this.set(getState(), getKeys());
         });
         return dataOrFn;
     };
     Store.prototype.addStore = function (store) {
         this.observers.push(store);
+    };
+    // @ts-ignore
+    Store.prototype.compute = function (map, mix) {
+        var store = new Store({ map: map, mix: mix }, TYPES.MULTI_TRACK);
+        this.addStore(store);
         return store;
     };
     // @ts-ignore
     Store.prototype.map = function (fn, shouldWatchNested) {
-        var store = new Store(fn, shouldWatchNested);
-        return this.addStore(store);
+        var type = shouldWatchNested ? TYPES.SINGLE_TRACK : TYPES.SINGLE_SHALLOW;
+        var store = new Store(fn, type);
+        this.addStore(store);
+        return store;
+    };
+    Store.prototype.handleChanged = function (computedData, keys) {
+        this.currentState = computedData;
+        this.reactors.forEach(function (fn) { return fn(computedData); });
+        this.observers.forEach(function (el) {
+            el.set(computedData, keys);
+        });
+    };
+    Store.prototype.run = function (data, keys, _a) {
+        var _this = this;
+        var context = _a.context;
+        var computedData;
+        switch (this.type) {
+            case TYPES.SINGLE_TRACK:
+                computedData = this.changesTracker.compute(function () { return _this.selector(data, context); });
+                if (!this.changesTracker.hasChanges(keys)) {
+                    return;
+                }
+                break;
+            case TYPES.MULTI_TRACK:
+                computedData = this.computed.compute(data, keys);
+                break;
+            default:
+                computedData = this.selector(data, context);
+                break;
+        }
+        if (shallowEquals(this.getState(), computedData)) {
+            return;
+        }
+        this.handleChanged(computedData, keys);
     };
     Store.prototype.set = function (data, keys) {
-        var _this = this;
         if (this.root) {
             keys = this.getState() ? keys : getAllKeys(data);
             wrapKeys(keys, data);
         }
         var context = this[ctxSymbol] && this[ctxSymbol].context;
-        var state = this.getState();
-        var computedData;
-        // @ts-ignore
-        if (this.watchNested) {
-            if (!this.changesTracker) {
-                this.changesTracker = new ChangesTracker();
-            }
-            var fn = function () { return _this.selector(data, context); };
-            computedData = this.changesTracker.compute(fn);
-            if (!this.changesTracker.hasChanges(keys)) {
-                return;
-            }
-        }
-        else {
-            computedData = this.selector(data, context);
-        }
-        if (!shallowEquals(state, computedData)) {
-            this.currentState = computedData;
-            this.reactors.forEach(function (fn) { return fn(computedData); });
-            this.observers.forEach(function (el) {
-                el.set(computedData, keys);
-            });
-        }
+        this.run(data, keys, { context: context });
     };
     return Store;
 }());
@@ -580,7 +633,6 @@ function createEffects(actions, prefix) {
     // @ts-ignore
     return createActions(actions, prefix);
 }
-//# sourceMappingURL=createAction.js.map
 
 var Consumer = /** @class */ (function (_super) {
     __extends(Consumer, _super);
@@ -610,7 +662,6 @@ var Consumer = /** @class */ (function (_super) {
     };
     return Consumer;
 }(React.Component));
-//# sourceMappingURL=Consumer.js.map
 
 function local(state) {
     var reducer = state.buildReducer();
@@ -619,7 +670,6 @@ function local(state) {
     state.use(store);
     return store;
 }
-//# sourceMappingURL=ministore.js.map
 
 function createState(initialState) {
     if (initialState === undefined) {
@@ -633,6 +683,9 @@ function createState(initialState) {
     var res2 = Object.assign(res, {
         use: store.use.bind(res),
         set: store.set.bind(res),
+        run: store.run.bind(res),
+        handleChanged: store.handleChanged.bind(res),
+        compute: store.compute.bind(res),
         addStore: store.addStore.bind(res),
         map: store.map.bind(res),
         getState: store.getState.bind(res),
@@ -642,6 +695,5 @@ function createState(initialState) {
     // @ts-ignore
     return res2;
 }
-//# sourceMappingURL=index.js.map
 
-export { createState, reducerPathSymbol, ctxSymbol, getKeys, ReducerBuilder, createAction, build, createActions, createEffects, Store, Consumer, local };
+export { createState, reducerPathSymbol, ctxSymbol, ReducerBuilder, createAction, build, createActions, createEffects, MultiTrack, Store, Consumer, local };

@@ -3,19 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var redux_1 = require("redux");
 exports.reducerPathSymbol = Symbol();
 exports.ctxSymbol = Symbol();
-var keys = [];
-var action;
-var changedMonitor = {
-    setChanged: function (newAction, key) {
-        if (action !== newAction) {
-            keys = [key];
-            action = newAction;
-        }
-        else {
-            keys.push(key);
-        }
-    }
-};
 function makeChangesMonitor() {
     var keys = [];
     var action;
@@ -33,7 +20,6 @@ function makeChangesMonitor() {
         getChangedKeys: function () { return keys; }
     };
 }
-exports.getKeys = function () { return keys; };
 function getProp(object, keys) {
     keys = Array.isArray(keys) ? keys : keys.split(".");
     object = object[keys[0]];
