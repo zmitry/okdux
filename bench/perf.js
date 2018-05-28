@@ -4,7 +4,7 @@ var suite = new Benchmark.Suite();
 var fn = () => 5;
 var proxy = data => {
   return new Proxy(data, {
-    get(target, key) {
+    set(target, key) {
       fn();
       return target[key];
     }
@@ -39,7 +39,7 @@ const getters = obj => {
   for (let i in obj) {
     const value = obj[i];
     Object.defineProperty(obj, i, {
-      get() {
+      set() {
         fn();
         return value;
       }

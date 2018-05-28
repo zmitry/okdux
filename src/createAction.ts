@@ -1,6 +1,11 @@
 export type StandardActionPayload<T> = { type: string; payload: T };
 
-export type StandardAction<T> = (payload: T) => { type: string; payload: T };
+export type StandardAction<T> = {
+  defaultValue?: T;
+  (payload: T): { type: string; payload: T };
+  getType(): string;
+};
+
 function createAction<T>(type: string): StandardAction<T> {
   const action = (payload: T) => ({ type, payload });
   const getType = () => type;
@@ -44,7 +49,7 @@ function createActions<T extends { [M in keyof T]: T[M] }>(
   actions: T,
   prefix: string = "@"
 ): { [M in keyof T]: StandardAction<Unpack<ReturnType<T[M]>>> } {
-  //@ts-ignore
+  // @ts-ignore
   return Object.keys(actions).reduce((acc, el) => {
     acc[el] = actions[el](prefix + "/" + el);
     return acc;

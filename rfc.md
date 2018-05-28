@@ -119,26 +119,21 @@ class List extends React.Component {
 ```
 
 ```js
-rootState
-  .map(state => {
-    const policyState = policiesRootState.select(state);
-    const selectedMachines = MachineState.ui.select(state).selectedMachines;
-    return {
-      selectedMachines,
-      ui: policyState.ui,
-      actions: policyState.actions,
-      entities: policyState.entities
-    };
-  })
-  .compute(
-    {
-      selectedPolicies: policyGetters.getSelectedPolicies,
-      policiesWithFilters: policyGetters.getAllPoliciesWithFilters,
-      easyUiPolicies: policyGetters.getEasyUiPolicies,
-      activePoliciesSet: MachineState.machineGetters.getActivePolicies
-    },
-    data => ({})
-  );
+const s = rootState.map(state => {
+  const policyState = policiesRootState.select(state);
+  const selectedMachines = MachineState.ui.select(state).selectedMachines;
+  return {
+    selectedMachines,
+    ui: policyState.ui,
+    actions: policyState.actions,
+    entities: policyState.entities
+  };
+});
+
+const computedItems = s.map(({{ ids, entities }}) =>  ids.map(id => entities[id])});
+const filteredItems = s.compose(computedItems, ([computedItems,{ start, pageSize }])=> computedItems.slice(start, pageSize))
+const highlightedItems = s.compose(filteredItems,([filteredItems,{ highlightedSet }])=> filteredItems.map(el =>
+  ({ ...el, active: highlightedSet.has(el) })));
 ```
 
 ```
@@ -147,4 +142,26 @@ compose(st, st2, st3, (st1,st2,st,3)=> {
 
   }
 })
+```
+
+```js
+export const entities = state({})
+  .lens(
+    actions.addPolicy,
+    lensIndex(({ id }) => id)
+      .key("items")
+      .lensIndex(({ itemId }) => itemId),
+    (state, { item }) => {
+      return [...state, policyId];
+    }
+  )
+  .on(events.replace, (_, payload) => payload);
+```
+
+```js
+const t = createState(true);
+
+t.on(toggle, (state, action) => {
+  return action;
+});
 ```
