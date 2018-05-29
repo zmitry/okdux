@@ -4,10 +4,10 @@ This lib was created for reducing pain from redux boilerplaite.
 
 1.  remove reducers and actions creators boilerplate
 2.  remove boilerplate from binding actions, all actions are autbinded to their scope
-3.  remove boilerplate from selecting hight level root state, now to can use .select method on every reducer to select it's state
+3.  remove boilerplate from selecting hight level  state, now to can use .select method on every reducer to select his state
 4.  more sophisticated way for computed values which works without memoization (like mobx but more performat and without wrapping all the state into getters)
 5.  more easier way for nested updates
-6.  strictly typed and well tested helpers
+6.  strictly typed and good test coverage
 
 # install
 
