@@ -1,7 +1,8 @@
 import { get } from "lodash";
 import { combineReducers, compose } from "redux";
+import im from "object-path-immutable";
 import { StandardAction, StandardActionPayload } from "./createAction";
-import { Store } from ".";
+import { LensCreator, makeLens } from "./lens";
 
 // function isReducerBuilder(builder) {
 //   return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
@@ -13,6 +14,11 @@ interface IReducerBuilder<T> {
   select<RootState>(rootState: RootState): T;
   mapState<R, P>(fn: (state: T, props: P) => R): (root: any, props) => R;
   on<E>(event: StandardAction<E>, handler: (state: T, payload: E) => T): IReducerBuilder<T>;
+  on<E, R>(
+    event: StandardAction<E>,
+    lens: (p: E, prop: LensCreator<T, E>) => LensCreator<R, E>,
+    handler: (state: R, payload: E) => R
+  ): IReducerBuilder<T>;
 }
 
 type Unpacked<T> = T extends IReducerBuilder<infer U>
@@ -44,7 +50,13 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
     }
   }
 
-  on<E>(action: StandardAction<E>, handler) {
+  on<E>(action: StandardAction<E>, handlerOrLens, handler = null) {
+    if (handler) {
+      this.lens(action, handlerOrLens, handler);
+      return this;
+    } else {
+      handler = handlerOrLens;
+    }
     if (action === undefined || action === null || !action.getType) {
       throw new Error("action should be an action, got " + action);
     }
@@ -53,6 +65,14 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
       action
     };
     return this;
+  }
+  lens(action, lens, handler) {
+    const propLens = makeLens();
+    this.handlers[action.getType()] = {
+      handler,
+      lens,
+      action
+    };
   }
 
   select = <R>(rs: R) => {
@@ -69,9 +89,19 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
       return state;
     }
     const { type, payload } = action;
-    if (this.handlers[type] && this.handlers[type].handler) {
-      const handler = this.handlers[type].handler;
-      state = handler(state, payload, action);
+    const handlerObj = this.handlers[type];
+    if (handlerObj && handlerObj.handler) {
+      if (handlerObj.lens) {
+        const path = handlerObj.lens(payload, makeLens()).path;
+        const data = get(state, path);
+        if (data) {
+          const subres = handlerObj.handler(data, payload);
+          state = im.set(state, path, subres);
+        }
+      } else {
+        const handler = this.handlers[type].handler;
+        state = handler(state, payload, action);
+      }
     }
 
     return state;
@@ -82,7 +112,6 @@ export type ReducerOrAction = BaseReducerBuilder<any> | StandardAction<any>;
 export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends BaseReducerBuilder<
   R<T>
 > {
-  nestedReducer;
   constructor(public stores: T) {
     super({} as any);
 
@@ -90,7 +119,6 @@ export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends
     Object.keys(stores).forEach(el => {
       let reducer = stores[el];
       if (reducer && reducer.getType) {
-        console.log(reducer.defaultValue, reducer);
         reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, (_, p) => p);
         stores[el] = reducer;
       }
@@ -98,15 +126,15 @@ export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends
       reducer.parent = parent;
     });
     // @ts-ignore
-    this.nestedReducer = combineReducers(
+    const nestedReducer = combineReducers(
       Object.keys(stores).reduce((acc, el) => {
         acc[el] = stores[el].reducer;
         return acc;
       }, {})
-    ).bind(this);
+    );
     const plainReducer = this.reducer;
     this.reducer = (state = this.initialState, action) => {
-      return plainReducer(this.nestedReducer(state, action), action);
+      return plainReducer(nestedReducer(state, action), action);
     };
   }
 }

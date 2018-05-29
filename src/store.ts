@@ -1,13 +1,15 @@
 import React from "react";
 import { get, intersection, uniq, flatten, last } from "lodash";
-import { reducerPathSymbol, ctxSymbol } from "./createReducer";
 import { shallowEquals } from "./shallowEquals";
 import { ChangesTracker, getAllKeys, wrapKeys } from "./changesTracker";
+import { LensCreator, makeLens } from "./lens";
 
 export interface IStore<T> {
   map: <P>(fn: (data: T, ctx: any) => P) => IStore<P>;
 }
 const identity = d => d;
+
+const dispatchCtx = Symbol("dispatchCtx");
 
 const TYPES = {
   SINGLE_SHALLOW: 1,
@@ -17,10 +19,32 @@ const TYPES = {
 
 function mergeKeys(data, store) {
   for (let action in store.handlers) {
-    const existingPath = data[action];
-    data[action] = existingPath
-      ? [...existingPath, store.getPath().join(".")]
+    const actionInfo = store.handlers[action];
+    const existingPaths = data[action];
+    data[action] = existingPaths
+      ? [...existingPaths, store.getPath().join(".")]
       : [store.getPath().join(".")];
+    if (actionInfo && actionInfo.lens) {
+      data[action].push(action => {
+        return [...store.getPath(), ...actionInfo.lens(action, makeLens()).path].join(".");
+      });
+    }
+  }
+}
+function forEachStore(stores, fn) {
+  for (let item in stores) {
+    if (stores[item]) {
+      fn(stores[item]);
+      if (stores[item].stores) {
+        fn(stores[item].stores);
+      }
+    }
+  }
+}
+
+function forEachAction(store, fn) {
+  for (let item in store.handlers) {
+    fn(store.handlers[item]);
   }
 }
 
@@ -54,16 +78,6 @@ export class Store<T> implements IStore<T> {
     }
   }
 
-  forEach(stores, fn) {
-    for (let item in stores) {
-      if (stores[item]) {
-        fn(stores[item]);
-        if (stores[item].stores) {
-          fn(stores[item].stores);
-        }
-      }
-    }
-  }
   use(dataOrFn) {
     const origReducer = this.reducer;
     this.reducer = (state, action) => {
@@ -75,22 +89,39 @@ export class Store<T> implements IStore<T> {
     if (typeof dataOrFn === "function") {
       return dataOrFn(this);
     }
-    const { subscribe, getState, context } = dataOrFn;
+    const { subscribe, getState, dispatch } = dataOrFn;
     this.root = true;
     this.initialized = true;
     // this[ctxSymbol].context = context;
-    // console.log(this);
-    this.forEach(this.stores, el => {
+    //
+    mergeKeys(this.keys, this);
+    forEachAction(this, data => {
+      data.action._dispatchers.add(dispatch);
+    });
+    forEachStore(this.stores, el => {
       // el[ctxSymbol] = this[ctxSymbol];
       mergeKeys(this.keys, el);
+
+      forEachAction(el, data => {
+        data.action._dispatchers.add(dispatch);
+      });
       this.addStore(el);
       el.initialized = true;
     });
     // const getKeys = this[ctxSymbol].changesMonitor.getChangedKeys;
 
     const getKeys = (keys, action) => {
-      // console.log("action: ", action);
-      return action && action.type ? keys[action.type] : [];
+      return action && action.type && keys[action.type]
+        ? keys[action.type]
+            .map(el => {
+              if (typeof el === "function") {
+                const res = el(action.payload);
+                return res;
+              }
+              return el;
+            })
+            .filter(el => !!el)
+        : [];
     };
     subscribe(() => {
       this.set(getState(), getKeys(this.keys, this.changedAction));
@@ -136,8 +167,6 @@ export class Store<T> implements IStore<T> {
   }
 
   set(data, keys) {
-    console.log(data);
-
     if (this.root) {
       keys = this.getState() ? keys : getAllKeys(data);
       wrapKeys(keys, data);

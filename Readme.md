@@ -6,98 +6,76 @@ yarn add @kraken97/restate
 
 [![Play kxr5vy1x6v](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/kxr5vy1x6v)
 
+```js
+const inc = createAction("Increment counters");
+// different types of counters
+const state = createState({ counters: [0, 0, 0, 0] });
+state.on(
+  inc,
+  (counterIndex, prop) => prop.key("counters").index(counterIndex),
+  (state, p) => {
+    // updating nested data
+    return state + 1;
+  }
+);
 
+// connect store to event sources in this example to basic redux
+const store = state.use(local);
 
-create state
+// compute data from our store
+// it will update our data only when data changes
+const computed = state.map(el => ({ very: { nested: { object: el.data[1] } } }), true);
+
+// will be called only once
+computed.subscribe(data => {
+  console.log("data changed", data);
+});
+
+// dispatch actions
+// all actions are autobinded to store after using .use action
+// you can assign one action to multiple stores
+// to access plain action call inc.raw();
+inc(1);
+inc(2);
+inc(2);
+inc(3);
+inc(8);
+```
 
 ```js
 import React from "react";
 import { render } from "react-dom";
-import {
-  createState,
-  createActions,
-  build,
-  local,
-  Consumer
-} from "@kraken97/restate";
+import { createState, createActions, build, local, Consumer } from "@kraken97/restate";
 
 const actions = createActions({
-  toggle: build.plain,
-  inc: build.plain,
-  text: build.plain,
-  popup: build.mutator(false)
+  setText: build.plain,
 });
 
-const toggle = createState(true);
-const counter = createState(0);
-counter.on(actions.inc, data => {
-  return data + 1;
-});
 const text = createState("text");
 text.on(actions.text, (data, payload) => {
   return payload;
 });
 
-const ui = createState({
-  counter,
-  text,
-  opened: actions.popup /*make reducer that returns payload */
-});
 
-const rootState = createState({ toggle, ui });
-
-const textState = ui.map((el, dispatch) => ({
-  t: el.text,
-  setText: e => dispatch(actions.text(e.target.value.replace(/\s/gi, "")))
-})); // it will track only changes for text after few updates
-
-const counterState = ui.map((state, dispatch) => {
-  return {
-    state: state.counter,
-    inc: () => dispatch(actions.inc())
-  };
-});
-const store = rootState.use(local);
+const store = text.use(local);
 
 store.dispatch({ type: "init" });
+
 class App extends React.Component {
   render() {
-    let counter1 = 0;
-    let counter2 = 0;
     return (
-      <div>
         <Consumer source={textState}>
           {data => {
             return (
-              <div>
-                render count{++counter1}
-                <br />
-                <input value={data.t} onChange={data.setText} />;
-              </div>
+                <input value={data.t} onChange={e => actions.setText(e.target.value)} />;
             );
           }}
         </Consumer>
-        <hr />
-        <Consumer source={counterState}>
-          {data => {
-            console.log(data);
-            return (
-              <div>
-                render count:{++counter2}
-                <br />
-                counter:{data.state}
-                <button onClick={data.inc}>inc</button>
-              </div>
-            );
-          }}
-        </Consumer>
-      </div>
     );
   }
 }
 
 render(<App />, document.getElementById("root"));
-
 ```
 
 # benchmarks

@@ -1,6 +1,5 @@
 import React from "react";
-import { get, intersection, uniq, flatten, last } from "lodash";
-import { reducerPathSymbol, ctxSymbol } from "./createReducer";
+import { get, intersection } from "lodash";
 
 let trackedFn;
 

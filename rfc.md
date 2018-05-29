@@ -161,7 +161,59 @@ export const entities = state({})
 ```js
 const t = createState(true);
 
-t.on(toggle, (state, action) => {
-  return action;
+const lens = lensIndex(({ id }) => id)
+  .key("items")
+  .index(({ itemId }) => itemId);
+t.on(
+  toggle,
+  ({ id }) => ["policies", id],
+  (state, action) => {
+    return action;
+  }
+);
+```
+
+```js
+const incCounter = createAction("incCounter");
+const state = createState({
+  counters: [0, 0, 0]
 });
+
+state.on(
+  incCounter,
+  (counterIndex, prop) => prop.key("counters").index(counterIndex),
+  (state) =>  state + 1;
+);
+
+// take second counter and compute some data
+const computed = state.map(el => ({ nested: { object: el.data[1] } } ), true);
+// should be called once
+computed.subscribe(el => {
+  console.log("second counter updated");
+});
+store.dispatch(incCounter(1));
+store.dispatch(incCounter(2));
+store.dispatch(incCounter(3));
+
+
+const store = state.use(local);
+```
+
+```js
+const incCounter = createAction("incCounter");
+const state = createState(0);
+const state2 = createState(0);
+
+
+state.on(
+  incCounter,
+  (state) =>  state + 1;
+);
+
+state2.on(
+  incCounter,
+  (state) =>  state + 1;
+);
+
+incCounter();
 ```

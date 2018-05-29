@@ -1,11 +1,6 @@
-import {
-  IReducerBuilder,
-  createState as state,
-  combineState,
-  R,
-  reducerPathSymbol
-} from "./createReducer";
+import { IReducerBuilder, createState as state, combineState, R } from "./createReducer";
 import { Store, IStore } from "./store";
+import { createAction, StandardAction } from "./createAction";
 
 export function createState<T>(initialState: T): IReducerBuilder<R<T>> & IStore<R<T>> {
   if (initialState === undefined) {
@@ -35,7 +30,6 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> & IStore<
     addStore: store.addStore.bind(res),
     map: store.map.bind(res),
     getState: store.getState.bind(res),
-    forEach: store.forEach.bind(res),
     subscribe: store.subscribe.bind(res)
   });
   // @ts-ignore

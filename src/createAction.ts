@@ -6,11 +6,29 @@ export type StandardAction<T> = {
   getType(): string;
 };
 
-function createAction<T>(type: string): StandardAction<T> {
-  const action = (payload: T) => ({ type, payload });
-  const getType = () => type;
-  return Object.assign(action, { getType });
-}
+const mutator = <T>(defaultValue: T) => (name: string): StandardAction<T> => {
+  const dispatchers = new Set();
+
+  const actionRaw = (data = defaultValue) => {
+    return { type: name, payload: data };
+  };
+  const action: any = (data = defaultValue) => {
+    const action = actionRaw(data);
+    dispatchers.forEach(fn => {
+      fn(action);
+    });
+    return action;
+  };
+
+  return Object.assign(action, {
+    getType: () => name,
+    defaultValue,
+    _dispatchers: dispatchers,
+    raw: actionRaw
+  });
+};
+
+const createAction = mutator(null);
 
 export type AsyncActions<A, B, C> = {
   request: StandardAction<A>;
@@ -32,12 +50,7 @@ const build = {
     // @ts-ignore
     return createAction(name);
   },
-  mutator: <T>(defaultValue: T) => (name: string): StandardAction<T> => {
-    const action: any = (data = defaultValue) => ({ type: name, payload: data });
-    action.defaultValue = defaultValue;
-    action.getType = () => name;
-    return action;
-  },
+  mutator: mutator,
   async: () => name => {
     return createAsyncAction(name);
   }
