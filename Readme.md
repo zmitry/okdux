@@ -23,7 +23,7 @@ state.on(
 const store = state.use(local);
 
 // compute data from our store
-// it will update our data only when data changes
+// it will recompute our value only when data changes
 const computed = state.map(el => ({ very: { nested: { object: el.data[1] } } }), true);
 
 // will be called only once
