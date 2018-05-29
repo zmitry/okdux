@@ -1,8 +1,8 @@
 import React from "react";
 import { createStore } from "redux";
-import { Store } from "../src/store";
+import { Store, compose } from "../src/store";
 import { ChangesTracker, checkKeyUsage, wrapKeys, getAllKeys } from "../src/changesTracker";
-import { createState, createAction, Consumer, local } from "../src";
+import { createState, createAction, Consumer, local, StandardAction } from "../src";
 import Render from "react-test-renderer";
 let mockedData;
 let changedKeys;
@@ -47,7 +47,6 @@ describe("restate", () => {
     expect(changesTracker.trackedDependencies).toEqual([]);
     expect(changesTracker.nestedTrackedDependencies).toEqual([]);
   });
-
   it("calculates computed", () => {
     const inc = createAction("inc");
     const set = createAction("text");
@@ -57,47 +56,21 @@ describe("restate", () => {
     const text = createState("hello");
     text.on(set, (data, ev) => data + ev);
     const root = createState({ text, counter });
-    const store = root.use(local);
-    const fn1 = jest.fn();
-    const fn2 = jest.fn();
-
-    const compute1 = data => {
-      fn1(data);
-      return data.text + data.counter;
-    };
-    const compute2 = data => {
-      fn2(data);
-      return data.text + Math.random();
-    };
-
-    const computation = root.compute({
-      msg: compute1,
-      msg2: compute2
+    const computedValue = counter.map(data => Math.random() >= 0.5);
+    const computedValue2 = computedValue.compose(text, data => {
+      return { a: [data[0]] };
     });
-    const clear = () => {
-      fn1.mockClear();
-      fn2.mockClear();
-    };
-    const subs = jest.fn();
-    computation
-      .map(el => {
-        return el.msg2;
-      })
-      .subscribe(el => console.log("cmp", el));
-    computation.subscribe(subs);
+    const store = root.use(local);
     store.dispatch(inc());
-    expect(fn1).toBeCalled();
-    expect(fn2.mock.calls.length).toBe(1);
-    clear();
-    store.dispatch(inc());
-    expect(fn1).toBeCalled();
-    expect(fn2.mock.calls.length).toBe(0);
-    store.dispatch(set("qwer"));
-    expect(fn1).toBeCalled();
-    expect(fn2).toBeCalled();
 
-    console.log(subs.mock.calls);
+    computedValue.subscribe(el => {});
+    computedValue2.subscribe(el => {});
+
+    for (let i = 0; i < 8; i++) {
+      store.dispatch(inc());
+    }
   });
+
   it("works ok with store", () => {
     const store = new Store();
     const newData = { ui: { a: "5" }, users: { password: "5dsf", name: "qwer" } };
@@ -121,11 +94,13 @@ describe("restate", () => {
     toggle.on(toggleEvent, (state, payload) => state + 1);
 
     const rootState = createState({ toggle, toggle2 });
-    const reducer = rootState.buildReducer();
+
+    const reducer = rootState.reducer;
     const store = createStore(reducer);
-    expect(rootState.observers.length).toBe(2);
 
     rootState.use(store);
+    // expect(rootState.observers.length).toBe(2);
+
     store.dispatch({ type: "" });
     // store.dispatch(toggleEvent());
     const renderer = Render.create(
@@ -146,7 +121,7 @@ describe("restate", () => {
     toggle.on(toggleEvent, (state, payload) => !state);
     counter.on(counterEvent, state => state + 1);
     const rootState = createState({ toggle, counter });
-    const reducer = rootState.buildReducer();
+    const reducer = rootState.reducer;
     const store = createStore(reducer);
 
     const toggleViewState = rootState
@@ -164,11 +139,7 @@ describe("restate", () => {
           true
         )
       );
-    rootState.use({
-      getState: store.getState,
-      subscribe: store.subscribe,
-      context: "hello"
-    });
+    rootState.use(store);
 
     const fn1 = jest.fn();
     const fn2 = jest.fn();
@@ -182,10 +153,10 @@ describe("restate", () => {
 
     // store.dispatch(toggleEvent());
     // store.dispatch(toggleEvent());
-    store.dispatch(toggleEvent());
-    store.dispatch(counterEvent());
-    store.dispatch(counterEvent());
-    store.dispatch(counterEvent());
+    toggleEvent();
+    counterEvent();
+    counterEvent();
+    counterEvent();
     expect(fn1.mock.calls.length).toBe(1);
     expect(fn2.mock.calls.length).toBe(4);
     expect(fn2.mock.calls).toMatchSnapshot();
@@ -195,7 +166,7 @@ describe("restate", () => {
   it("works ok with ministore", () => {
     const e = createAction("e");
     const state = createState("a");
-    state.on(e, state => state);
+    state.on(e, state => state + 1);
     const fn = jest.fn();
 
     state.map(fn);
@@ -214,6 +185,46 @@ describe("restate", () => {
     st.dispatch(e2(1));
     st.dispatch(e2(5));
 
-    expect(fn.mock.calls[0][1]).toEqual(st.dispatch);
+    expect(fn.mock.calls[0][0]).toEqual("a1");
+  });
+
+  it("works with lenses", () => {
+    const toggle: StandardAction<number> = createAction("TOGGLE");
+    const state = createState({ data: [{ id: 1 }, { id: 2, title: "qwer" }], kek: " 5" });
+    state.on(
+      toggle,
+      (payload, prop) => prop.key("data").index(payload),
+      (state, p) => {
+        return { ...state, title: "qqq" };
+      }
+    );
+
+    const store = state.use(local);
+    const computed = state.map(el => ({ very: { nested: { object: el.data[1] } } }), true);
+    const fn = jest.fn();
+    computed.subscribe(fn);
+    toggle(1);
+    toggle(2);
+    toggle(2);
+    toggle(3);
+    toggle(8);
+
+    const reducer = state.reducer;
+    expect(reducer(undefined, toggle.raw(1))).toEqual({
+      data: [{ id: 1 }, { id: 2, title: "qqq" }],
+      kek: " 5"
+    });
+    expect(fn.mock.calls.length).toBe(1);
+  });
+
+  it("works with action binding", () => {
+    const toggle: StandardAction<number> = createAction("TOGGLE");
+    const state = createState(0);
+    state.on(toggle, state => {
+      return state + 1;
+    });
+    const store = state.use(local);
+    toggle(1);
+    expect([...toggle._dispatchers].length).toBe(1);
   });
 });

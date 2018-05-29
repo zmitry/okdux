@@ -1,5 +1,30 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`rerender only needed times 1`] = `
+Array [
+  Array [
+    0,
+  ],
+  Array [
+    1,
+  ],
+  Array [
+    2,
+  ],
+  Array [
+    3,
+  ],
+]
+`;
+
+exports[`rerender only needed times 2`] = `
+Array [
+  Array [
+    true,
+  ],
+]
+`;
+
 exports[`restate getAllKeys works correctly: getAllKeys 1`] = `
 Array [
   "ui",

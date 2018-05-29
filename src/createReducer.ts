@@ -1,108 +1,24 @@
-import { combineReducers } from "redux";
+import { get } from "lodash";
+import { combineReducers, compose } from "redux";
+import im from "object-path-immutable";
 import { StandardAction, StandardActionPayload } from "./createAction";
-import { Store } from ".";
+import { LensCreator, makeLens } from "./lens";
 
-export const reducerPathSymbol = Symbol();
-export const ctxSymbol = Symbol();
+// function isReducerBuilder(builder) {
+//   return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
+// }
 
-function makeChangesMonitor() {
-  let keys = [];
-  let action;
-  return {
-    setChanged: (newAction, key) => {
-      if (action !== newAction) {
-        keys = [key];
-        action = newAction;
-      } else {
-        keys.push(key);
-      }
-    },
-    // @ts-ignore
-    getChangedKeys: () => keys
-  };
-}
-
-function getProp(object, keys) {
-  keys = Array.isArray(keys) ? keys : keys.split(".");
-  object = object[keys[0]];
-  if (object && keys.length > 1) {
-    return getProp(object, keys.slice(1));
-  }
-  return object;
-}
-
-function isReducerBuilder(builder) {
-  return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
-}
-function traverseReducers(reducers, { path, ctx }) {
-  for (let key in reducers) {
-    const reducer = reducers[key];
-    if (isReducerBuilder(reducer)) {
-      reducer[reducerPathSymbol] = (path ? path + "." : "") + key;
-      ctx.addStore(reducer);
-    }
-  }
-}
-
-const atomReducer = (defaultV, type) => (state = defaultV, action) =>
-  action && action.type === type ? action.payload : state;
-
-const identityWithDefault = d => (s = d) => s;
-function pruneInitialState(initialState) {
-  const acc = { reducers: {}, defaultState: {} };
-  let hasReducers = false;
-  for (let item in initialState) {
-    const el = item;
-    if (isReducerBuilder(initialState[el])) {
-      acc.reducers[el] = initialState[el].buildReducer();
-      hasReducers = true;
-    } else if (initialState[el] && initialState[el].getType) {
-      const t = initialState[el].getType();
-      hasReducers = true;
-      acc.reducers[el] = atomReducer(initialState[el].defaultValue, t);
-    } else {
-      acc.defaultState[el] = initialState[el];
-    }
-  }
-  if (hasReducers) {
-    for (let el in initialState) {
-      if (!isReducerBuilder(initialState[el]) && !initialState[el].getType) {
-        acc.reducers[el] = identityWithDefault(initialState[el]);
-      }
-    }
-  } else {
-    return { reducers: {}, defaultState: initialState };
-  }
-  return acc;
-}
 let identity = <T>(d: T, ..._: any[]): T => d;
-
-function getDefaultReducer(initialState, { path, ctx }) {
-  let defaultState = initialState;
-  let nestedReducer = identity;
-
-  if (typeof initialState === "object" && !Array.isArray(initialState)) {
-    traverseReducers(initialState, { path, ctx });
-    const res = pruneInitialState(initialState);
-
-    if (Object.keys(res.reducers).length !== 0) {
-      // @ts-ignore
-      nestedReducer = combineReducers(res.reducers);
-    }
-    defaultState = res.defaultState;
-  }
-  return { nestedReducer, defaultState };
-}
 
 interface IReducerBuilder<T> {
   select<RootState>(rootState: RootState): T;
-  buildReducer(path: string): <P>(state: T, action: any) => T;
-  mapState<R, P>(fn: (state: T, props: P) => R): (root: any) => R;
-  handle(
-    event: string | string[],
-    handler: (state: T, payload: any, meta: any) => T | void
-  ): IReducerBuilder<T>;
+  mapState<R, P>(fn: (state: T, props: P) => R): (root: any, props) => R;
   on<E>(event: StandardAction<E>, handler: (state: T, payload: E) => T): IReducerBuilder<T>;
+  on<E, R>(
+    event: StandardAction<E>,
+    lens: (p: E, prop: LensCreator<T, E>) => LensCreator<R, E>,
+    handler: (state: R, payload: E) => R
+  ): IReducerBuilder<T>;
 }
 
 type Unpacked<T> = T extends IReducerBuilder<infer U>
@@ -111,87 +27,123 @@ type Unpacked<T> = T extends IReducerBuilder<infer U>
 
 type R<T> = { [P in keyof T]: Unpacked<T[P]> };
 
-export class ReducerBuilder<T> implements IReducerBuilder<T> {
+export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
   public handlers = {};
-  private [reducerPathSymbol] = "";
-  private [ctxSymbol] = {};
-  private _reducer;
+  parent;
+  path;
+  constructor(public initialState: T) {
+    if (typeof initialState === "undefined") {
+      throw new Error("initial state should not be undefined");
+    }
+    this.reducer = this.reducer.bind(this);
+  }
 
-  constructor(public initialState: T) {}
-  // @ts-ignore
-  on(action, handler) {
+  setPath(path) {
+    this.path = path;
+  }
+
+  getPath() {
+    if (this.parent) {
+      return this.parent.getPath().concat(this.path);
+    } else {
+      return this.path ? [this.path] : [];
+    }
+  }
+
+  on<E>(action: StandardAction<E>, handlerOrLens, handler = null) {
+    if (handler) {
+      this.lens(action, handlerOrLens, handler);
+      return this;
+    } else {
+      handler = handlerOrLens;
+    }
     if (action === undefined || action === null || !action.getType) {
       throw new Error("action should be an action, got " + action);
     }
-    this.handlers[action.getType()] = handler;
+    this.handlers[action.getType()] = {
+      handler,
+      action
+    };
     return this;
   }
-  // @ts-ignore
-  handle(type, handler) {
-    if (Array.isArray(type)) {
-      type.forEach(t => this.handle(t, handler));
-    } else {
-      this.handlers[type] = handler;
-    }
-    return this;
+  lens(action, lens, handler) {
+    const propLens = makeLens();
+    this.handlers[action.getType()] = {
+      handler,
+      lens,
+      action
+    };
   }
 
   select = <R>(rs: R) => {
-    if (this[reducerPathSymbol]) {
-      return getProp(rs, this[reducerPathSymbol]);
-    } else {
-      return rs;
-    }
+    const path = this.getPath();
+    return path.length ? get(rs, this.getPath()) : rs;
   };
-  // @ts-ignore
-  mapState = fn => {
+
+  mapState = (fn = identity) => {
     return (state, props) => fn(this.select(state), props, state);
   };
-  get reducer() {
-    return this._reducer;
-  }
-  buildReducer(path: string) {
-    if (path) {
-      this[reducerPathSymbol] = path;
-    }
-    // @ts-ignore
-    if (!this[ctxSymbol].changesMonitor) {
-      // @ts-ignore
-      this[ctxSymbol].changesMonitor = makeChangesMonitor();
-    }
-    const { defaultState, nestedReducer } = getDefaultReducer(this.initialState, {
-      path: this[reducerPathSymbol] || path,
-      ctx: {
-        // @ts-ignore
-        addStore: this.addStore,
-        // @ts-ignore
-        changesMonitor: this[ctxSymbol].changesMonitor
-      }
-    });
 
-    const reducer = <P>(state: T = defaultState, action: StandardActionPayload<P>): T => {
-      state = nestedReducer(state, action);
-
-      if (!action) {
-        return state;
-      }
-
-      const { type, payload } = action;
-      if (this.handlers[type]) {
-        const handler = this.handlers[type];
-        let nextState = handler(state, payload, action);
-        if (nextState !== state) {
-          // @ts-ignore
-          this[ctxSymbol].changesMonitor.setChanged(action, this[reducerPathSymbol]);
-        }
-        state = nextState;
-      }
-
+  public reducer = <P>(state: T = this.initialState, action: StandardActionPayload<P>): T => {
+    if (!action) {
       return state;
+    }
+    const { type, payload } = action;
+    const handlerObj = this.handlers[type];
+    if (handlerObj && handlerObj.handler) {
+      if (handlerObj.lens) {
+        const path = handlerObj.lens(payload, makeLens()).path;
+        const data = get(state, path);
+        if (data) {
+          const subres = handlerObj.handler(data, payload);
+          state = im.set(state, path, subres);
+        }
+      } else {
+        const handler = this.handlers[type].handler;
+        state = handler(state, payload, action);
+      }
+    }
+
+    return state;
+  };
+}
+
+export type ReducerOrAction = BaseReducerBuilder<any> | StandardAction<any>;
+export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends BaseReducerBuilder<
+  R<T>
+> {
+  constructor(public stores: T) {
+    super({} as any);
+
+    const parent = { getPath: this.getPath.bind(this) };
+    Object.keys(stores).forEach(el => {
+      let reducer = stores[el];
+      if (reducer && reducer.getType) {
+        reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, (_, p) => p);
+        stores[el] = reducer;
+      }
+      reducer.setPath(el);
+      reducer.parent = parent;
+    });
+    // @ts-ignore
+    const nestedReducer = combineReducers(
+      Object.keys(stores).reduce((acc, el) => {
+        acc[el] = stores[el].reducer;
+        return acc;
+      }, {})
+    );
+    const plainReducer = this.reducer;
+    this.reducer = (state = this.initialState, action) => {
+      return plainReducer(nestedReducer(state, action), action);
     };
-    this._reducer = reducer;
-    return reducer;
   }
+}
+
+export function createState<T>(data: T) {
+  return new BaseReducerBuilder<T>(data);
+}
+export function combineState<T extends { [i: string]: ReducerOrAction }>(data: T) {
+  return new CombinedReducer<T>(data);
 }
 
 export { R, Unpacked, IReducerBuilder };

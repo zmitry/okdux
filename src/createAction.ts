@@ -1,11 +1,34 @@
 export type StandardActionPayload<T> = { type: string; payload: T };
 
-export type StandardAction<T> = (payload: T) => { type: string; payload: T };
-function createAction<T>(type: string): StandardAction<T> {
-  const action = (payload: T) => ({ type, payload });
-  const getType = () => type;
-  return Object.assign(action, { getType });
-}
+export type StandardAction<T> = {
+  defaultValue?: T;
+  (payload: T): { type: string; payload: T };
+  getType(): string;
+};
+
+const mutator = <T>(defaultValue: T) => (name: string): StandardAction<T> => {
+  const dispatchers = new Set();
+
+  const actionRaw = (data = defaultValue) => {
+    return { type: name, payload: data };
+  };
+  const action: any = (data = defaultValue) => {
+    const action = actionRaw(data);
+    dispatchers.forEach(fn => {
+      fn(action);
+    });
+    return action;
+  };
+
+  return Object.assign(action, {
+    getType: () => name,
+    defaultValue,
+    _dispatchers: dispatchers,
+    raw: actionRaw
+  });
+};
+
+const createAction = mutator(null);
 
 export type AsyncActions<A, B, C> = {
   request: StandardAction<A>;
@@ -27,12 +50,7 @@ const build = {
     // @ts-ignore
     return createAction(name);
   },
-  mutator: <T>(defaultValue: T) => (name: string): StandardAction<T> => {
-    const action: any = (data = defaultValue) => ({ type: name, payload: data });
-    action.defaultValue = defaultValue;
-    action.getType = () => name;
-    return action;
-  },
+  mutator: mutator,
   async: () => name => {
     return createAsyncAction(name);
   }
@@ -44,7 +62,7 @@ function createActions<T extends { [M in keyof T]: T[M] }>(
   actions: T,
   prefix: string = "@"
 ): { [M in keyof T]: StandardAction<Unpack<ReturnType<T[M]>>> } {
-  //@ts-ignore
+  // @ts-ignore
   return Object.keys(actions).reduce((acc, el) => {
     acc[el] = actions[el](prefix + "/" + el);
     return acc;
