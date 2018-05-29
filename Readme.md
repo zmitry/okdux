@@ -57,6 +57,8 @@ text.on(actions.text, (data, payload) => {
 });
 
 
+// you can use plain redux with this lib
+// go to ministore.ts file
 const store = text.use(local);
 
 store.dispatch({ type: "init" });
@@ -101,4 +103,14 @@ immutableJS
   heap:
     total 4.5 Mb
     used  24.5 Mb
+```
+
+# test coverage
+
+```
+-------------------|----------|----------|----------|----------|-------------------|
+File               |  % Stmts | % Branch |  % Funcs |  % Lines | Uncovered Line #s |
+-------------------|----------|----------|----------|----------|-------------------|
+All files          |    93.02 |    86.11 |    87.37 |    93.08 |                   |
+-------------------|----------|----------|----------|----------|-------------------|
 ```
