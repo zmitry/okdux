@@ -28,8 +28,7 @@ export declare type ReducerOrAction = BaseReducerBuilder<any> | StandardAction<a
 export declare class CombinedReducer<T extends {
     [i: string]: ReducerOrAction;
 }> extends BaseReducerBuilder<R<T>> {
-    stores: T;
-    constructor(stores: T);
+    constructor(storesToParse: T);
 }
 export declare function createState<T>(data: T): BaseReducerBuilder<T>;
 export declare function combineState<T extends {

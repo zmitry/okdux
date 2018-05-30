@@ -328,6 +328,7 @@ function lens(path, prop) {
 function makeLens() {
     return lens.call(null, [], null);
 }
+//# sourceMappingURL=lens.js.map
 
 // function isReducerBuilder(builder) {
 //   return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
@@ -423,29 +424,32 @@ var BaseReducerBuilder = /** @class */ (function () {
 }());
 var CombinedReducer = /** @class */ (function (_super) {
     __extends(CombinedReducer, _super);
-    function CombinedReducer(stores) {
+    function CombinedReducer(storesToParse) {
         var _this = _super.call(this, {}) || this;
-        _this.stores = stores;
         var parent = { getPath: _this.getPath.bind(_this) };
-        Object.keys(stores).forEach(function (el) {
-            var reducer = stores[el];
+        var stores = {};
+        // @ts-ignore
+        _this.stores = stores;
+        Object.keys(storesToParse).forEach(function (el) {
+            var reducer = storesToParse[el];
             // @ts-ignore
             if (reducer && reducer.getType) {
                 // @ts-ignore
                 reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, function (_, p) { return p; });
-                stores[el] = reducer;
             }
+            stores[el] = reducer;
             // @ts-ignore
             reducer.setPath(el);
             // @ts-ignore
             reducer.parent = parent;
         });
-        // @ts-ignore
-        var nestedReducer = combineReducers(Object.keys(stores).reduce(function (acc, el) {
+        var reducersMap = Object.keys(stores).reduce(function (acc, el) {
             // @ts-ignore
             acc[el] = stores[el].reducer;
             return acc;
-        }, {}));
+        }, {});
+        // @ts-ignore
+        var nestedReducer = combineReducers(reducersMap);
         var plainReducer = _this.reducer;
         // @ts-ignore
         _this.reducer = function (state, action) {
@@ -487,6 +491,7 @@ function shallowEquals(a, b) {
     }
     return true;
 }
+//# sourceMappingURL=shallowEquals.js.map
 
 var trackedFn;
 function buildNestedKeys(trackedNested) {
@@ -647,6 +652,7 @@ var ChangesTracker = /** @class */ (function () {
     };
     return ChangesTracker;
 }());
+//# sourceMappingURL=changesTracker.js.map
 
 var identity$1 = function (d) { return d; };
 var TYPES = {
@@ -828,6 +834,7 @@ function compose() {
     });
     return store;
 }
+//# sourceMappingURL=store.js.map
 
 var mutator = function (defaultValue) { return function (name) {
     var dispatchers = new Set();
@@ -882,6 +889,7 @@ function createEffects(actions, prefix) {
     // @ts-ignore
     return createActions(actions, prefix);
 }
+//# sourceMappingURL=createAction.js.map
 
 var Consumer = /** @class */ (function (_super) {
     __extends(Consumer, _super);
@@ -911,6 +919,7 @@ var Consumer = /** @class */ (function (_super) {
     };
     return Consumer;
 }(React.Component));
+//# sourceMappingURL=Consumer.js.map
 
 function local(state) {
     var reducer = state.reducer;
@@ -918,6 +927,7 @@ function local(state) {
     state.use(store);
     return store;
 }
+//# sourceMappingURL=ministore.js.map
 
 function createState$1(initialState) {
     if (initialState === undefined) {
@@ -926,7 +936,8 @@ function createState$1(initialState) {
     var reducer;
     if (typeof initialState === "object") {
         var firstKey = Object.keys(initialState)[0];
-        if (initialState[firstKey] && initialState[firstKey].reducer) {
+        if (initialState[firstKey] &&
+            (initialState[firstKey].reducer || initialState[firstKey].getType)) {
             // @ts-ignore
             reducer = combineState(initialState);
         }
@@ -954,5 +965,6 @@ function createState$1(initialState) {
     // @ts-ignore
     return res2;
 }
+//# sourceMappingURL=index.js.map
 
 export { createState$1 as createState, createAction, build, createActions, createEffects, Store, compose, Consumer, local };

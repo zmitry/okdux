@@ -227,4 +227,27 @@ describe("restate", () => {
     toggle(1);
     expect([...toggle._dispatchers].length).toBe(1);
   });
+
+  it("composes state with actions corrctly", () => {
+    const toggle: StandardAction<number> = createAction("TOGGLE");
+    const state = createState(0);
+    let composed = createState({
+      toggle,
+      state
+    });
+    expect(composed.reducer()).toEqual({ toggle: null, state: 0 });
+    composed = createState({
+      state,
+      toggle
+    });
+    composed = createState({
+      toggle
+    });
+    expect(composed.reducer()).toEqual({ toggle: null });
+
+    composed = createState({
+      data: 2
+    });
+    expect(composed.reducer()).toEqual({ data: 2 });
+  });
 });

@@ -113,31 +113,37 @@ export type ReducerOrAction = BaseReducerBuilder<any> | StandardAction<any>;
 export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends BaseReducerBuilder<
   R<T>
 > {
-  constructor(public stores: T) {
+  constructor(storesToParse: T) {
     super({} as any);
 
     const parent = { getPath: this.getPath.bind(this) };
-    Object.keys(stores).forEach(el => {
-      let reducer = stores[el];
+    const stores = {};
+    // @ts-ignore
+    this.stores = stores;
+    Object.keys(storesToParse).forEach(el => {
+      let reducer = storesToParse[el];
+
       // @ts-ignore
       if (reducer && reducer.getType) {
         // @ts-ignore
         reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, (_, p) => p);
-        stores[el] = reducer;
       }
+      stores[el] = reducer;
+
       // @ts-ignore
       reducer.setPath(el);
       // @ts-ignore
       reducer.parent = parent;
     });
+
+    const reducersMap = Object.keys(stores).reduce((acc, el) => {
+      // @ts-ignore
+      acc[el] = stores[el].reducer;
+      return acc;
+    }, {});
+
     // @ts-ignore
-    const nestedReducer = combineReducers(
-      Object.keys(stores).reduce((acc, el) => {
-        // @ts-ignore
-        acc[el] = stores[el].reducer;
-        return acc;
-      }, {})
-    );
+    const nestedReducer = combineReducers(reducersMap);
     const plainReducer = this.reducer;
     // @ts-ignore
     this.reducer = (state = this.initialState, action) => {

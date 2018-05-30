@@ -9,7 +9,10 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> & IStore<
   let reducer;
   if (typeof initialState === "object") {
     const firstKey = Object.keys(initialState)[0];
-    if (initialState[firstKey] && initialState[firstKey].reducer) {
+    if (
+      initialState[firstKey] &&
+      (initialState[firstKey].reducer || initialState[firstKey].getType)
+    ) {
       // @ts-ignore
       reducer = combineState(initialState);
     } else {
