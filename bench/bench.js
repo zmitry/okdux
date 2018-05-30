@@ -191,7 +191,7 @@ test("mobx", prepared => {
 
 test("restate x", prepared => {
   //$off
-  const { createAction, createState, local } = require("../dist/lib");
+  const { createAction, createState, local } = require("../dist/lib/");
 
   const updateEvent = createAction("update");
   const effectorStore = createState(generateDraft()).on(updateEvent, draft => {
@@ -210,6 +210,31 @@ test("restate x", prepared => {
 
   updateEvent();
   return effectorStore.getState();
+});
+
+test("restate x (only redux helpers)", prepared => {
+  //$off
+  const { createState } = require("../dist/lib/createReducer");
+  const { createAction } = require("../dist/lib/createAction");
+
+  const updateEvent = createAction("update");
+  const restateStore = createState(generateDraft()).on(updateEvent, draft => {
+    const newDraft = draft.concat([]);
+    for (let i = 0; i < MAX * MODIFY_FACTOR; i++) {
+      newDraft[i] = Object.assign({}, newDraft[i], { done: true });
+    }
+    return newDraft;
+  });
+
+  const store = redux.createStore(restateStore.reducer);
+  store.subscribe(() => {});
+  prepared();
+
+  prepared();
+
+  store.dispatch(updateEvent.raw());
+
+  return store.getState();
 });
 
 const { proxyState, proxyEqual, proxyShallow } = require("proxyequal");
