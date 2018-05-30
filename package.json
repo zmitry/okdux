@@ -1,6 +1,6 @@
 {
   "name": "@kraken97/restate",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "description": "",
   "keywords": [],
   "kibana": {
@@ -33,10 +33,7 @@
     "bench": "node --experimental-modules --expose-gc bench/bench.js"
   },
   "lint-staged": {
-    "{src,test}/**/*.tsx?": [
-      "prettier --write --no-semi --single-quote",
-      "git add"
-    ]
+    "{src,test}/**/*.tsx?": ["prettier --write --no-semi --single-quote", "git add"]
   },
   "config": {
     "commitizen": {
@@ -44,7 +41,8 @@
     },
     "validate-commit-msg": {
       "types": "conventional-commit-types",
-      "helpMessage": "Use \"npm run commit\" instead, we use conventional-changelog format :) (https://github.com/commitizen/cz-cli)"
+      "helpMessage":
+        "Use \"npm run commit\" instead, we use conventional-changelog format :) (https://github.com/commitizen/cz-cli)"
     }
   },
   "jest": {
@@ -52,15 +50,8 @@
       ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
     },
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js"
-    ],
-    "coveragePathIgnorePatterns": [
-      "/node_modules/",
-      "/test/"
-    ],
+    "moduleFileExtensions": ["ts", "tsx", "js"],
+    "coveragePathIgnorePatterns": ["/node_modules/", "/test/"],
     "coverageThreshold": {
       "global": {
         "branches": 40,

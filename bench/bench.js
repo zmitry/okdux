@@ -202,13 +202,13 @@ test("restate x", prepared => {
     return newDraft;
   });
 
-  effectorStore.map(el => el[0]);
+  effectorStore.map(el => el[0], true);
 
   effectorStore.subscribe(data => {});
   const store = effectorStore.use(local);
   prepared();
 
-  store.dispatch(updateEvent());
+  updateEvent();
   return effectorStore.getState();
 });
 
