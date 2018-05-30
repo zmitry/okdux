@@ -50,6 +50,7 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
     }
   }
 
+  // @ts-ignore
   on<E>(action: StandardAction<E>, handlerOrLens, handler = null) {
     if (handler) {
       this.lens(action, handlerOrLens, handler);
@@ -79,7 +80,7 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
     const path = this.getPath();
     return path.length ? get(rs, this.getPath()) : rs;
   };
-
+  // @ts-ignore
   mapState = (fn = identity) => {
     return (state, props) => fn(this.select(state), props, state);
   };
@@ -118,22 +119,29 @@ export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends
     const parent = { getPath: this.getPath.bind(this) };
     Object.keys(stores).forEach(el => {
       let reducer = stores[el];
+      // @ts-ignore
       if (reducer && reducer.getType) {
+        // @ts-ignore
         reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, (_, p) => p);
         stores[el] = reducer;
       }
+      // @ts-ignore
       reducer.setPath(el);
+      // @ts-ignore
       reducer.parent = parent;
     });
     // @ts-ignore
     const nestedReducer = combineReducers(
       Object.keys(stores).reduce((acc, el) => {
+        // @ts-ignore
         acc[el] = stores[el].reducer;
         return acc;
       }, {})
     );
     const plainReducer = this.reducer;
+    // @ts-ignore
     this.reducer = (state = this.initialState, action) => {
+      // @ts-ignore
       return plainReducer(nestedReducer(state, action), action);
     };
   }

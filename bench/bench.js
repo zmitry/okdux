@@ -158,6 +158,21 @@ test("immer (proxy) - without autofreeze", prepared => {
   return draft;
 });
 
+test("mobx", prepared => {
+  //$off
+  const { observable } = require("mobx");
+  const data = observable(generateDraft());
+  prepared();
+
+  const mutate = draft => {
+    for (let i = 0; i < MAX * MODIFY_FACTOR; i++) {
+      draft[i].done = true;
+    }
+  };
+  mutate(data);
+  return data;
+});
+
 // test('effector (mutable inner update)', prepared => {
 //  //$off
 //  const {createEvent, createStore} = require('../npm/effector/effector.cjs.js')

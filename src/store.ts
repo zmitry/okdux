@@ -71,6 +71,7 @@ export class Store<T> implements IStore<T> {
 
   constructor(data, type) {
     this.type = type;
+    // @ts-ignore
     this.compose = compose.bind(null, this);
     this.selector = data || identity;
     if (type === TYPES.SINGLE_TRACK) {
@@ -79,9 +80,12 @@ export class Store<T> implements IStore<T> {
   }
 
   use(dataOrFn) {
+    // @ts-ignore
     const origReducer = this.reducer;
+    // @ts-ignore
     this.reducer = (state, action) => {
       const res = origReducer(state, action);
+      // @ts-ignore
       this.changedAction = action;
       return res;
     };
@@ -98,6 +102,7 @@ export class Store<T> implements IStore<T> {
     forEachAction(this, data => {
       data.action._dispatchers.add(dispatch);
     });
+    // @ts-ignore
     forEachStore(this.stores, el => {
       // el[ctxSymbol] = this[ctxSymbol];
       mergeKeys(this.keys, el);
@@ -124,6 +129,7 @@ export class Store<T> implements IStore<T> {
         : [];
     };
     subscribe(() => {
+      // @ts-ignore
       this.set(getState(), getKeys(this.keys, this.changedAction));
     });
     return dataOrFn;
@@ -179,12 +185,15 @@ export function compose(...stores: IStore<any>[]) {
   const fn: any = stores.pop();
   const store = new Store(fn, TYPES.SINGLE_TRACK);
   function reactor() {
+    // @ts-ignore
     if (stores.find(el => !el.computed)) {
       return;
     }
+    // @ts-ignore
     store.set(stores.map(el => el.getState()), []);
   }
   stores.forEach(el => {
+    // @ts-ignore
     el.subscribe(reactor);
   });
   return store;

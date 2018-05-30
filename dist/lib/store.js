@@ -1,81 +1,81 @@
 "use strict";
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spread = (this && this.__spread) || function () {
+    for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
+    return ar;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-var createReducer_1 = require("./createReducer");
 var shallowEquals_1 = require("./shallowEquals");
 var changesTracker_1 = require("./changesTracker");
+var lens_1 = require("./lens");
 var identity = function (d) { return d; };
-var Subscriber = /** @class */ (function () {
-    function Subscriber() {
-        this.reactors = [];
-        this.observers = [];
-    }
-    Subscriber.prototype.subscribe = function (fn) {
-        var _this = this;
-        this.reactors.push(fn);
-        return function () { return _this.reactors.filter(function (el) { return !fn; }); };
-    };
-    Subscriber.prototype.notify = function (computedData, keys) {
-        this.reactors.forEach(function (fn) { return fn(computedData); });
-        this.observers.forEach(function (el) {
-            el.set(computedData, keys);
-        });
-    };
-    return Subscriber;
-}());
-var SUBSCRIBE = 1;
-var MAP = 2;
-var COMPUTE = 3;
-var graph = [];
+var dispatchCtx = Symbol("dispatchCtx");
 var TYPES = {
     SINGLE_SHALLOW: 1,
     SINGLE_TRACK: 2,
     MULTI_TRACK: 3
 };
-var MultiTrack = /** @class */ (function () {
-    function MultiTrack(_a) {
-        var map = _a.map, _b = _a.mix, mix = _b === void 0 ? identity : _b;
-        var _this = this;
-        this.trackers = {};
-        this.values = {};
-        this.map = map;
-        this.mix = mix;
-        Object.keys(map).forEach(function (el) {
-            _this.trackers[el] = new changesTracker_1.ChangesTracker();
-        });
-        this.keys = Object.keys(map);
-    }
-    MultiTrack.prototype.compute = function (data, changedKeys) {
-        var _this = this;
-        var res = this.keys.reduce(function (acc, el) {
-            var fn = _this.map[el];
-            if (_this.trackers[el].hasChanges(changedKeys)) {
-                var value = _this.trackers[el].compute(function () { return fn(data, acc); });
-                acc[el] = value;
-                _this.values[el] = value;
-            }
-            return acc;
-        }, Object.assign({}, this.values, this.mix(data)));
-        return res;
+function mergeKeys(data, store) {
+    var _loop_1 = function (action) {
+        var actionInfo = store.handlers[action];
+        var existingPaths = data[action];
+        data[action] = existingPaths
+            ? __spread(existingPaths, [store.getPath().join(".")]) : [store.getPath().join(".")];
+        if (actionInfo && actionInfo.lens) {
+            data[action].push(function (action) {
+                return __spread(store.getPath(), actionInfo.lens(action, lens_1.makeLens()).path).join(".");
+            });
+        }
     };
-    return MultiTrack;
-}());
-exports.MultiTrack = MultiTrack;
+    for (var action in store.handlers) {
+        _loop_1(action);
+    }
+}
+function forEachStore(stores, fn) {
+    for (var item in stores) {
+        if (stores[item]) {
+            fn(stores[item]);
+            if (stores[item].stores) {
+                fn(stores[item].stores);
+            }
+        }
+    }
+}
+function forEachAction(store, fn) {
+    for (var item in store.handlers) {
+        fn(store.handlers[item]);
+    }
+}
 var Store = /** @class */ (function () {
     function Store(data, type) {
         this.reactors = [];
         this.observers = [];
+        this.keys = {};
         this.root = false;
         this.initialized = false;
+        this.computed = false;
         this.type = TYPES.SINGLE_SHALLOW;
         this.type = type;
-        if (type === TYPES.MULTI_TRACK) {
-            this.computed = new MultiTrack(data);
-        }
-        else if (type === TYPES.SINGLE_TRACK) {
+        // @ts-ignore
+        this.compose = compose.bind(null, this);
+        this.selector = data || identity;
+        if (type === TYPES.SINGLE_TRACK) {
             this.changesTracker = new changesTracker_1.ChangesTracker();
-        }
-        else {
-            this.selector = data || identity;
         }
     }
     Store.prototype.getState = function () {
@@ -86,39 +86,61 @@ var Store = /** @class */ (function () {
         this.reactors.push(fn);
         return function () { return _this.reactors.filter(function (el) { return !fn; }); };
     };
-    Store.prototype.forEach = function (fn) {
-        this.observers.forEach(function (el) {
-            fn(el);
-            el.forEach(fn);
-        });
-    };
     Store.prototype.use = function (dataOrFn) {
         var _this = this;
+        // @ts-ignore
+        var origReducer = this.reducer;
+        // @ts-ignore
+        this.reducer = function (state, action) {
+            var res = origReducer(state, action);
+            // @ts-ignore
+            _this.changedAction = action;
+            return res;
+        };
         if (typeof dataOrFn === "function") {
             return dataOrFn(this);
         }
-        var subscribe = dataOrFn.subscribe, getState = dataOrFn.getState, context = dataOrFn.context;
+        var subscribe = dataOrFn.subscribe, getState = dataOrFn.getState, dispatch = dataOrFn.dispatch;
         this.root = true;
         this.initialized = true;
-        this[createReducer_1.ctxSymbol].context = context;
-        this.forEach(function (el) {
-            el[createReducer_1.ctxSymbol] = _this[createReducer_1.ctxSymbol];
+        // this[ctxSymbol].context = context;
+        //
+        mergeKeys(this.keys, this);
+        forEachAction(this, function (data) {
+            data.action._dispatchers.add(dispatch);
+        });
+        // @ts-ignore
+        forEachStore(this.stores, function (el) {
+            // el[ctxSymbol] = this[ctxSymbol];
+            mergeKeys(_this.keys, el);
+            forEachAction(el, function (data) {
+                data.action._dispatchers.add(dispatch);
+            });
+            _this.addStore(el);
             el.initialized = true;
         });
-        var getKeys = this[createReducer_1.ctxSymbol].changesMonitor.getChangedKeys;
+        // const getKeys = this[ctxSymbol].changesMonitor.getChangedKeys;
+        var getKeys = function (keys, action) {
+            return action && action.type && keys[action.type]
+                ? keys[action.type]
+                    .map(function (el) {
+                    if (typeof el === "function") {
+                        var res = el(action.payload);
+                        return res;
+                    }
+                    return el;
+                })
+                    .filter(function (el) { return !!el; })
+                : [];
+        };
         subscribe(function () {
-            _this.set(getState(), getKeys());
+            // @ts-ignore
+            _this.set(getState(), getKeys(_this.keys, _this.changedAction));
         });
         return dataOrFn;
     };
     Store.prototype.addStore = function (store) {
         this.observers.push(store);
-    };
-    // @ts-ignore
-    Store.prototype.compute = function (map, mix) {
-        var store = new Store({ map: map, mix: mix }, TYPES.MULTI_TRACK);
-        this.addStore(store);
-        return store;
     };
     // @ts-ignore
     Store.prototype.map = function (fn, shouldWatchNested) {
@@ -128,28 +150,23 @@ var Store = /** @class */ (function () {
         return store;
     };
     Store.prototype.handleChanged = function (computedData, keys) {
+        this.computed = true;
         this.currentState = computedData;
+        this.observers.forEach(function (el) { return el.run(computedData, keys); });
         this.reactors.forEach(function (fn) { return fn(computedData); });
-        this.observers.forEach(function (el) {
-            el.set(computedData, keys);
-        });
     };
-    Store.prototype.run = function (data, keys, _a) {
+    Store.prototype.run = function (data, keys) {
         var _this = this;
-        var context = _a.context;
         var computedData;
         switch (this.type) {
             case TYPES.SINGLE_TRACK:
-                computedData = this.changesTracker.compute(function () { return _this.selector(data, context); });
+                computedData = this.changesTracker.compute(function () { return _this.selector(data, null); });
                 if (!this.changesTracker.hasChanges(keys)) {
                     return;
                 }
                 break;
-            case TYPES.MULTI_TRACK:
-                computedData = this.computed.compute(data, keys);
-                break;
             default:
-                computedData = this.selector(data, context);
+                computedData = this.selector(data, null);
                 break;
         }
         if (shallowEquals_1.shallowEquals(this.getState(), computedData)) {
@@ -162,20 +179,31 @@ var Store = /** @class */ (function () {
             keys = this.getState() ? keys : changesTracker_1.getAllKeys(data);
             changesTracker_1.wrapKeys(keys, data);
         }
-        var context = this[createReducer_1.ctxSymbol] && this[createReducer_1.ctxSymbol].context;
-        this.run(data, keys, { context: context });
+        this.run(data, keys);
     };
     return Store;
 }());
 exports.Store = Store;
-// function compose(...stores) {
-//   const store = new Store();
-//   function reactor() {
-//     store.callReactors(stores.map(el => el.getState()));
-//   }
-//   stores.forEach(el => {
-//     el.react(reactor);
-//   });
-//   return store;
-// }
+function compose() {
+    var stores = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        stores[_i] = arguments[_i];
+    }
+    var fn = stores.pop();
+    var store = new Store(fn, TYPES.SINGLE_TRACK);
+    function reactor() {
+        // @ts-ignore
+        if (stores.find(function (el) { return !el.computed; })) {
+            return;
+        }
+        // @ts-ignore
+        store.set(stores.map(function (el) { return el.getState(); }), []);
+    }
+    stores.forEach(function (el) {
+        // @ts-ignore
+        el.subscribe(reactor);
+    });
+    return store;
+}
+exports.compose = compose;
 //# sourceMappingURL=store.js.map

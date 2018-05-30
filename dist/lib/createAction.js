@@ -1,10 +1,27 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-function createAction(type) {
-    var action = function (payload) { return ({ type: type, payload: payload }); };
-    var getType = function () { return type; };
-    return Object.assign(action, { getType: getType });
-}
+var mutator = function (defaultValue) { return function (name) {
+    var dispatchers = new Set();
+    var actionRaw = function (data) {
+        if (data === void 0) { data = defaultValue; }
+        return { type: name, payload: data };
+    };
+    var action = function (data) {
+        if (data === void 0) { data = defaultValue; }
+        var action = actionRaw(data);
+        dispatchers.forEach(function (fn) {
+            fn(action);
+        });
+        return action;
+    };
+    return Object.assign(action, {
+        getType: function () { return name; },
+        defaultValue: defaultValue,
+        _dispatchers: dispatchers,
+        raw: actionRaw
+    });
+}; };
+var createAction = mutator(null);
 exports.createAction = createAction;
 function createAsyncAction(name) {
     return {
@@ -19,15 +36,7 @@ var build = {
         // @ts-ignore
         return createAction(name);
     },
-    mutator: function (defaultValue) { return function (name) {
-        var action = function (data) {
-            if (data === void 0) { data = defaultValue; }
-            return ({ type: name, payload: data });
-        };
-        action.defaultValue = defaultValue;
-        action.getType = function () { return name; };
-        return action;
-    }; },
+    mutator: mutator,
     async: function () { return function (name) {
         return createAsyncAction(name);
     }; }
@@ -35,7 +44,7 @@ var build = {
 exports.build = build;
 function createActions(actions, prefix) {
     if (prefix === void 0) { prefix = "@"; }
-    //@ts-ignore
+    // @ts-ignore
     return Object.keys(actions).reduce(function (acc, el) {
         acc[el] = actions[el](prefix + "/" + el);
         return acc;

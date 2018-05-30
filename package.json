@@ -117,6 +117,7 @@
     "redux": "*"
   },
   "dependencies": {
+    "mobx": "^4.3.0",
     "object-path-immutable": "^1.0.2"
   }
 }

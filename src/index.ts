@@ -10,6 +10,7 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> & IStore<
   if (typeof initialState === "object") {
     const firstKey = Object.keys(initialState)[0];
     if (initialState[firstKey] && initialState[firstKey].reducer) {
+      // @ts-ignore
       reducer = combineState(initialState);
     } else {
       reducer = state(initialState);
