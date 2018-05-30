@@ -1,4 +1,8 @@
-# Into
+# Restate
+
+[![CircleCI](https://circleci.com/gh/zhDmitry/restate.svg?style=svg)](https://circleci.com/gh/zhDmitry/restate)
+
+## Into
 
 This lib was created for reducing pain from redux boilerplaite.
 
@@ -9,7 +13,7 @@ This lib was created for reducing pain from redux boilerplaite.
 5.  more easier way for nested updates
 6.  strictly typed and good test coverage
 
-# install
+## install
 
 ```
 yarn add @kraken97/restate
@@ -91,7 +95,7 @@ class App extends React.Component {
 render(<App />, document.getElementById("root"));
 ```
 
-# benchmarks
+## benchmarks
 
 ```
 * just mutate [FLOOR]
@@ -214,7 +218,7 @@ dmitry at Dmitrys-MacBook-Pro in ~/P/c/k/p/restatex (master↑2|✚1)
   rss: 1.6 Mb
 ```
 
-# test coverage
+## test coverage
 
 ```
 -------------------|----------|----------|----------|----------|-------------------|
