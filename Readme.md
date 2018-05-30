@@ -99,69 +99,6 @@ render(<App />, document.getElementById("root"));
 
 ```
 * just mutate [FLOOR]
-  create: 26 ms
-  update: 343 μs
-  heap:
-    total 1.5 Mb
-    used  17.3 Mb
-  rss: 1.8 Mb
-
-* immutableJS
-  create: 255 ms
-  update: 35 ms
-  heap:
-    total 93.3 Mb
-    used  72.4 Mb
-  rss: 102.6 Mb
-
-* immer (proxy) - without autofreeze
-  create: 22 ms
-  update: 59 ms
-  heap:
-    total 21.2 Mb
-    used  23.9 Mb
-  rss: 20.2 Mb
-
-* mobx
-  create: 2.75 s
-  update: 38 ms
-  heap:
-    total 147.3 Mb
-    used  147.9 Mb
-  rss: 147.3 Mb
-
-* restate x
-  create: 76 ms
-  update: 12 ms
-  heap:
-    total 16.4 Mb
-    used  26.4 Mb
-  rss: 16.5 Mb
-
-* proxy
-  create:
-  update: 663 h
-  heap:
-    total 44.5 Mb
-    used  50.6 Mb
-  rss: 43.0 Mb
-
-* redux
-  create: 27 ms
-  update: 11 ms
-  heap:
-    total 3.2 Mb
-    used  22.0 Mb
-  rss: 1.4 Mb
-
-dmitry at Dmitrys-MacBook-Pro in ~/P/c/k/p/restatex (master↑2|✚1)
-» npm run bench
-
-> @kraken97/restate@1.0.7 bench /Users/dmitry/Projects/cyberhaven/kibana-plugins/packages/restatex
-> node --experimental-modules --expose-gc bench/bench.js
-
-(node:91274) ExperimentalWarning: The ESM module loader is experimental.
-* just mutate [FLOOR]
   create: 29 ms
   update: 374 μs
   heap:
@@ -201,13 +138,6 @@ dmitry at Dmitrys-MacBook-Pro in ~/P/c/k/p/restatex (master↑2|✚1)
     used  26.3 Mb
   rss: 18.6 Mb
 
-* proxy
-  create:
-  update: 663 h
-  heap:
-    total 44.5 Mb
-    used  50.5 Mb
-  rss: 43.3 Mb
 
 * redux
   create: 28 ms
