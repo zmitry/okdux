@@ -94,6 +94,7 @@ export function wrapKeys(keys, data) {
 export class ChangesTracker {
   private trackedDeps: Set<string>;
   private trackedNestedDeps: Set<string>;
+  private computed = false;
 
   constructor() {
     this.trackedDeps = new Set<string>();
@@ -123,6 +124,7 @@ export class ChangesTracker {
 
     deps.forEach(el => this.trackedDeps.add(el));
     nested.forEach(el => this.trackedNestedDeps.add(el));
+    this.computed = true;
 
     return cmpData;
   }
@@ -133,12 +135,12 @@ export class ChangesTracker {
   }
 
   public hasChanges(changedKeys) {
-    if (this.trackedDependencies.length === 0) {
+    if (this.trackedDependencies.length === 0 && !this.computed) {
       return true;
     }
-    return (
+    const res =
       intersection(this.trackedDependencies, changedKeys).length > 0 ||
-      ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys)
-    );
+      ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys);
+    return res;
   }
 }

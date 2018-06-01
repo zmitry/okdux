@@ -1,28 +1,61 @@
-import React from "react";
+import * as React from "react";
+import { Store } from "./store";
 
-export class Consumer extends React.Component<any, { currentState: any }> {
+export class Consumer extends React.PureComponent<
+  { children: any; source: any; selector: any },
+  { currentState: any }
+> {
+  static displayName = "StoreConsumer";
+  state: { currentState: any };
+
+  _unsubscribe: Function;
+  _hasUnmounted: boolean = false;
+  propStore: any;
+  store: any;
+
   constructor(props) {
     super(props);
-    //@ts-ignore
-    this.state = { currentState: props.source.getState() };
+    if (props.selector) {
+      this.store = props.source.map(state => {
+        return props.selector(state, this.props || props);
+      }, props.track);
+      this.state = { currentState: props.selector(props.source.getState()) };
+    } else {
+      this.store = props.source;
+      this.state = { currentState: this.store.getState() };
+    }
   }
-  // @ts-ignore
-  unsub;
+
   componentDidMount() {
-    // @ts-ignore
-    this.unsub = this.props.source.subscribe(state => {
-      // @ts-ignore
-      if (state !== this.state.currentState) {
-        // @ts-ignore
-        this.setState({ currentState: state });
-      }
-    });
+    this.subscribe();
   }
   componentWillUnmount() {
-    this.unsub();
+    this.unsubscribe();
+    this._hasUnmounted = true;
   }
   render() {
     // @ts-ignore
     return this.props.children(this.state.currentState);
+  }
+
+  subscribe() {
+    const callback = (state: any) => {
+      if (this._hasUnmounted) {
+        return;
+      }
+
+      this.setState({ currentState: state });
+    };
+
+    const unsubscribe = this.store.subscribe(callback);
+
+    this._unsubscribe = unsubscribe;
+  }
+  unsubscribe() {
+    if (typeof this._unsubscribe === "function") {
+      this._unsubscribe();
+    }
+
+    this._unsubscribe = null;
   }
 }

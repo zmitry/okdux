@@ -15,7 +15,7 @@ export declare class Store<T> implements IStore<T> {
     changesTracker: ChangesTracker;
     getState(): any;
     subscribe(fn: any): () => any[];
-    constructor(data: any, type: any);
+    constructor(data: any, type?: number);
     use(dataOrFn: any): any;
     addStore(store: any): void;
     map(fn: any, shouldWatchNested: any): Store<{}>;

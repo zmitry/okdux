@@ -63,6 +63,7 @@ function forEachAction(store, fn) {
 }
 var Store = /** @class */ (function () {
     function Store(data, type) {
+        if (type === void 0) { type = TYPES.SINGLE_SHALLOW; }
         this.reactors = [];
         this.observers = [];
         this.keys = {};
@@ -121,22 +122,24 @@ var Store = /** @class */ (function () {
         });
         // const getKeys = this[ctxSymbol].changesMonitor.getChangedKeys;
         var getKeys = function (keys, action) {
-            return action && action.type && keys[action.type]
-                ? keys[action.type]
-                    .map(function (el) {
-                    if (typeof el === "function") {
-                        var res = el(action.payload);
-                        return res;
-                    }
-                    return el;
-                })
-                    .filter(function (el) { return !!el; })
-                : [];
+            if (!action || !action.type || !keys[action.type]) {
+                return [];
+            }
+            return keys[action.type]
+                .map(function (el) {
+                if (typeof el === "function") {
+                    var res = el(action.payload);
+                    return res;
+                }
+                return el;
+            })
+                .filter(function (el) { return !!el; });
         };
         subscribe(function () {
             // @ts-ignore
             _this.set(getState(), getKeys(_this.keys, _this.changedAction));
         });
+        dispatch({ type: "init" });
         return dataOrFn;
     };
     Store.prototype.addStore = function (store) {
@@ -160,7 +163,7 @@ var Store = /** @class */ (function () {
         var computedData;
         switch (this.type) {
             case TYPES.SINGLE_TRACK:
-                computedData = this.changesTracker.compute(function () { return _this.selector(data, null); });
+                computedData = this.changesTracker.compute(function () { return _this.selector(data); });
                 if (!this.changesTracker.hasChanges(keys)) {
                     return;
                 }

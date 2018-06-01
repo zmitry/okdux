@@ -130,6 +130,7 @@ function wrapKeys(keys, data) {
 exports.wrapKeys = wrapKeys;
 var ChangesTracker = /** @class */ (function () {
     function ChangesTracker() {
+        this.computed = false;
         this.trackedDeps = new Set();
         this.trackedNestedDeps = new Set();
     }
@@ -179,6 +180,7 @@ var ChangesTracker = /** @class */ (function () {
         var _a = __read(checkKeyUsage(fn), 3), cmpData = _a[0], deps = _a[1], nested = _a[2];
         deps.forEach(function (el) { return _this.trackedDeps.add(el); });
         nested.forEach(function (el) { return _this.trackedNestedDeps.add(el); });
+        this.computed = true;
         return cmpData;
     };
     ChangesTracker.prototype.clearObservedKeys = function () {
@@ -186,11 +188,12 @@ var ChangesTracker = /** @class */ (function () {
         this.trackedNestedDeps.clear();
     };
     ChangesTracker.prototype.hasChanges = function (changedKeys) {
-        if (this.trackedDependencies.length === 0) {
+        if (this.trackedDependencies.length === 0 && !this.computed) {
             return true;
         }
-        return (lodash_1.intersection(this.trackedDependencies, changedKeys).length > 0 ||
-            ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys));
+        var res = lodash_1.intersection(this.trackedDependencies, changedKeys).length > 0 ||
+            ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys);
+        return res;
     };
     return ChangesTracker;
 }());

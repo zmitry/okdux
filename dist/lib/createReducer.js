@@ -109,29 +109,32 @@ var BaseReducerBuilder = /** @class */ (function () {
 exports.BaseReducerBuilder = BaseReducerBuilder;
 var CombinedReducer = /** @class */ (function (_super) {
     __extends(CombinedReducer, _super);
-    function CombinedReducer(stores) {
+    function CombinedReducer(storesToParse) {
         var _this = _super.call(this, {}) || this;
-        _this.stores = stores;
         var parent = { getPath: _this.getPath.bind(_this) };
-        Object.keys(stores).forEach(function (el) {
-            var reducer = stores[el];
+        var stores = {};
+        // @ts-ignore
+        _this.stores = stores;
+        Object.keys(storesToParse).forEach(function (el) {
+            var reducer = storesToParse[el];
             // @ts-ignore
             if (reducer && reducer.getType) {
                 // @ts-ignore
                 reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, function (_, p) { return p; });
-                stores[el] = reducer;
             }
+            stores[el] = reducer;
             // @ts-ignore
             reducer.setPath(el);
             // @ts-ignore
             reducer.parent = parent;
         });
-        // @ts-ignore
-        var nestedReducer = redux_1.combineReducers(Object.keys(stores).reduce(function (acc, el) {
+        var reducersMap = Object.keys(stores).reduce(function (acc, el) {
             // @ts-ignore
             acc[el] = stores[el].reducer;
             return acc;
-        }, {}));
+        }, {});
+        // @ts-ignore
+        var nestedReducer = redux_1.combineReducers(reducersMap);
         var plainReducer = _this.reducer;
         // @ts-ignore
         _this.reducer = function (state, action) {

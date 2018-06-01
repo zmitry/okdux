@@ -102,11 +102,25 @@ describe("restate", () => {
     // expect(rootState.observers.length).toBe(2);
 
     store.dispatch({ type: "" });
-    // store.dispatch(toggleEvent());
+    toggleEvent();
     const renderer = Render.create(
       <Consumer source={toggle}>
         {data => {
           expect(data).toEqual(toggle.getState());
+          return <div>{JSON.stringify(data)}</div>;
+        }}
+      </Consumer>
+    );
+
+    const renderer2 = Render.create(
+      <Consumer
+        source={toggle}
+        selector={data => {
+          return data + 1;
+        }}
+      >
+        {data => {
+          expect(data).toEqual(2);
           return <div>{JSON.stringify(data)}</div>;
         }}
       </Consumer>

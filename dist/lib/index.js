@@ -4,8 +4,6 @@
     (factory((global.restate = {}),global.lodash,global.redux,global.React));
 }(this, (function (exports,lodash,redux,React) { 'use strict';
 
-    React = React && React.hasOwnProperty('default') ? React['default'] : React;
-
     /*! *****************************************************************************
     Copyright (c) Microsoft Corporation. All rights reserved.
     Licensed under the Apache License, Version 2.0 (the "License"); you may not use
@@ -322,7 +320,7 @@
     });
 
     function lens(path, prop) {
-        path = prop ? path.concat(prop) : path;
+        path = typeof prop !== "undefined" && prop !== null ? path.concat(prop) : path;
         return {
             key: lens.bind(null, path),
             index: lens.bind(null, path),
@@ -332,7 +330,6 @@
     function makeLens() {
         return lens.call(null, [], null);
     }
-    //# sourceMappingURL=lens.js.map
 
     // function isReducerBuilder(builder) {
     //   return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
@@ -473,6 +470,8 @@
     }
 
     function shallowEquals(a, b) {
+        if (a === void 0) { a = {}; }
+        if (b === void 0) { b = {}; }
         if (Object.is(a, b)) {
             return true;
         }
@@ -495,7 +494,6 @@
         }
         return true;
     }
-    //# sourceMappingURL=shallowEquals.js.map
 
     var trackedFn;
     function buildNestedKeys(trackedNested) {
@@ -592,6 +590,7 @@
     }
     var ChangesTracker = /** @class */ (function () {
         function ChangesTracker() {
+            this.computed = false;
             this.trackedDeps = new Set();
             this.trackedNestedDeps = new Set();
         }
@@ -641,6 +640,7 @@
             var _a = __read(checkKeyUsage(fn), 3), cmpData = _a[0], deps = _a[1], nested = _a[2];
             deps.forEach(function (el) { return _this.trackedDeps.add(el); });
             nested.forEach(function (el) { return _this.trackedNestedDeps.add(el); });
+            this.computed = true;
             return cmpData;
         };
         ChangesTracker.prototype.clearObservedKeys = function () {
@@ -648,15 +648,15 @@
             this.trackedNestedDeps.clear();
         };
         ChangesTracker.prototype.hasChanges = function (changedKeys) {
-            if (this.trackedDependencies.length === 0) {
+            if (this.trackedDependencies.length === 0 && !this.computed) {
                 return true;
             }
-            return (lodash.intersection(this.trackedDependencies, changedKeys).length > 0 ||
-                ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys));
+            var res = lodash.intersection(this.trackedDependencies, changedKeys).length > 0 ||
+                ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys);
+            return res;
         };
         return ChangesTracker;
     }());
-    //# sourceMappingURL=changesTracker.js.map
 
     var identity$1 = function (d) { return d; };
     var TYPES = {
@@ -697,6 +697,7 @@
     }
     var Store = /** @class */ (function () {
         function Store(data, type) {
+            if (type === void 0) { type = TYPES.SINGLE_SHALLOW; }
             this.reactors = [];
             this.observers = [];
             this.keys = {};
@@ -755,22 +756,24 @@
             });
             // const getKeys = this[ctxSymbol].changesMonitor.getChangedKeys;
             var getKeys = function (keys, action) {
-                return action && action.type && keys[action.type]
-                    ? keys[action.type]
-                        .map(function (el) {
-                        if (typeof el === "function") {
-                            var res = el(action.payload);
-                            return res;
-                        }
-                        return el;
-                    })
-                        .filter(function (el) { return !!el; })
-                    : [];
+                if (!action || !action.type || !keys[action.type]) {
+                    return [];
+                }
+                return keys[action.type]
+                    .map(function (el) {
+                    if (typeof el === "function") {
+                        var res = el(action.payload);
+                        return res;
+                    }
+                    return el;
+                })
+                    .filter(function (el) { return !!el; });
             };
             subscribe(function () {
                 // @ts-ignore
                 _this.set(getState(), getKeys(_this.keys, _this.changedAction));
             });
+            dispatch({ type: "init" });
             return dataOrFn;
         };
         Store.prototype.addStore = function (store) {
@@ -794,7 +797,7 @@
             var computedData;
             switch (this.type) {
                 case TYPES.SINGLE_TRACK:
-                    computedData = this.changesTracker.compute(function () { return _this.selector(data, null); });
+                    computedData = this.changesTracker.compute(function () { return _this.selector(data); });
                     if (!this.changesTracker.hasChanges(keys)) {
                         return;
                     }
@@ -838,7 +841,6 @@
         });
         return store;
     }
-    //# sourceMappingURL=store.js.map
 
     var mutator = function (defaultValue) { return function (name) {
         var dispatchers = new Set();
@@ -893,37 +895,55 @@
         // @ts-ignore
         return createActions(actions, prefix);
     }
-    //# sourceMappingURL=createAction.js.map
 
     var Consumer = /** @class */ (function (_super) {
         __extends(Consumer, _super);
         function Consumer(props) {
             var _this = _super.call(this, props) || this;
-            //@ts-ignore
-            _this.state = { currentState: props.source.getState() };
+            _this._hasUnmounted = false;
+            if (props.selector) {
+                _this.store = props.source.map(function (state) {
+                    return props.selector(state, _this.props || props);
+                }, props.track);
+                _this.state = { currentState: props.selector(props.source.getState()) };
+            }
+            else {
+                _this.store = props.source;
+                _this.state = { currentState: _this.store.getState() };
+            }
             return _this;
         }
         Consumer.prototype.componentDidMount = function () {
-            var _this = this;
-            // @ts-ignore
-            this.unsub = this.props.source.subscribe(function (state) {
-                // @ts-ignore
-                if (state !== _this.state.currentState) {
-                    // @ts-ignore
-                    _this.setState({ currentState: state });
-                }
-            });
+            this.subscribe();
         };
         Consumer.prototype.componentWillUnmount = function () {
-            this.unsub();
+            this.unsubscribe();
+            this._hasUnmounted = true;
         };
         Consumer.prototype.render = function () {
             // @ts-ignore
             return this.props.children(this.state.currentState);
         };
+        Consumer.prototype.subscribe = function () {
+            var _this = this;
+            var callback = function (state) {
+                if (_this._hasUnmounted) {
+                    return;
+                }
+                _this.setState({ currentState: state });
+            };
+            var unsubscribe = this.store.subscribe(callback);
+            this._unsubscribe = unsubscribe;
+        };
+        Consumer.prototype.unsubscribe = function () {
+            if (typeof this._unsubscribe === "function") {
+                this._unsubscribe();
+            }
+            this._unsubscribe = null;
+        };
+        Consumer.displayName = "StoreConsumer";
         return Consumer;
-    }(React.Component));
-    //# sourceMappingURL=Consumer.js.map
+    }(React.PureComponent));
 
     function local(state) {
         var reducer = state.reducer;
@@ -931,7 +951,6 @@
         state.use(store);
         return store;
     }
-    //# sourceMappingURL=ministore.js.map
 
     function createState$1(initialState) {
         if (initialState === undefined) {
@@ -969,7 +988,6 @@
         // @ts-ignore
         return res2;
     }
-    //# sourceMappingURL=index.js.map
 
     exports.createState = createState$1;
     exports.createAction = createAction;

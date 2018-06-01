@@ -95,6 +95,7 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
       if (handlerObj.lens) {
         const path = handlerObj.lens(payload, makeLens()).path;
         const data = get(state, path);
+
         if (data) {
           const subres = handlerObj.handler(data, payload);
           state = im.set(state, path, subres);

@@ -69,7 +69,7 @@ export class Store<T> implements IStore<T> {
     return () => this.reactors.filter(el => !fn);
   }
 
-  constructor(data, type) {
+  constructor(data, type = TYPES.SINGLE_SHALLOW) {
     this.type = type;
     // @ts-ignore
     this.compose = compose.bind(null, this);
@@ -116,22 +116,25 @@ export class Store<T> implements IStore<T> {
     // const getKeys = this[ctxSymbol].changesMonitor.getChangedKeys;
 
     const getKeys = (keys, action) => {
-      return action && action.type && keys[action.type]
-        ? keys[action.type]
-            .map(el => {
-              if (typeof el === "function") {
-                const res = el(action.payload);
-                return res;
-              }
-              return el;
-            })
-            .filter(el => !!el)
-        : [];
+      if (!action || !action.type || !keys[action.type]) {
+        return [];
+      }
+      return keys[action.type]
+        .map(el => {
+          if (typeof el === "function") {
+            const res = el(action.payload);
+
+            return res;
+          }
+          return el;
+        })
+        .filter(el => !!el);
     };
     subscribe(() => {
       // @ts-ignore
       this.set(getState(), getKeys(this.keys, this.changedAction));
     });
+    dispatch({ type: "init" });
     return dataOrFn;
   }
   addStore(store) {
@@ -150,6 +153,7 @@ export class Store<T> implements IStore<T> {
     this.computed = true;
     this.currentState = computedData;
     this.observers.forEach(el => el.run(computedData, keys));
+
     this.reactors.forEach(fn => fn(computedData));
   }
 
@@ -157,7 +161,7 @@ export class Store<T> implements IStore<T> {
     let computedData;
     switch (this.type) {
       case TYPES.SINGLE_TRACK:
-        computedData = this.changesTracker.compute(() => this.selector(data, null));
+        computedData = this.changesTracker.compute(() => this.selector(data));
         if (!this.changesTracker.hasChanges(keys)) {
           return;
         }

@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function shallowEquals(a, b) {
+    if (a === void 0) { a = {}; }
+    if (b === void 0) { b = {}; }
     if (Object.is(a, b)) {
         return true;
     }

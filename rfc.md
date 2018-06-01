@@ -108,7 +108,7 @@ const textState = ui.map(el => el.text);
 class List extends React.Component {
   render() {
     return (
-      <Consumer source={textState}>
+      <Consumer source={textState} selector={(data, props) => data[props.id]}>
         {data => {
           return <div>{data}</div>;
         }}
@@ -116,6 +116,20 @@ class List extends React.Component {
     );
   }
 }
+
+function List({ data }) {
+  return <div>{data}</div>;
+}
+
+const ListEnhanced = connect(
+  textState,
+  (data, props) => (
+    {
+      a: data.entities[props.id]
+    },
+    true
+  )
+)(List);
 ```
 
 ```js

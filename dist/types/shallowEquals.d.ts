@@ -1,1 +1,1 @@
-export declare function shallowEquals(a: any, b: any): boolean;
+export declare function shallowEquals(a?: {}, b?: {}): boolean;

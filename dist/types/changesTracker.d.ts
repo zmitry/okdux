@@ -5,6 +5,7 @@ export declare function wrapKeys(keys: any, data: any): void;
 export declare class ChangesTracker {
     private trackedDeps;
     private trackedNestedDeps;
+    private computed;
     constructor();
     static hasNestedChanges(nestedKeysToTrack: any, changedKeys: any): boolean;
     readonly trackedDependencies: string[];
