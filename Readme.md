@@ -19,6 +19,11 @@ This lib was created for reducing pain from redux boilerplaite.
 yarn add @kraken97/restate
 ```
 
+## how to use
+doc soon
+see [tree view example from redux](https://github.com/zhDmitry/restate/tree/master/examples/tree/src)
+
+
 [![Play kxr5vy1x6v](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/kxr5vy1x6v)
 
 ```js
@@ -148,9 +153,6 @@ render(<App />, document.getElementById("root"));
   rss: 1.6 Mb
 ```
 
-## how to use
-doc soon
-see [tree view example from redux](https://github.com/zhDmitry/restate/tree/master/examples/tree/src)
 
 ## test coverage
 
