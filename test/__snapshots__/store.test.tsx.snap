@@ -19,9 +19,6 @@ Array [
 exports[`restate rerender only needed times 1`] = `
 Array [
   Array [
-    0,
-  ],
-  Array [
     1,
   ],
   Array [
@@ -36,7 +33,26 @@ Array [
 exports[`restate rerender only needed times 2`] = `
 Array [
   Array [
-    true,
+    Object {
+      "toggle": Object {
+        "a": Object {
+          "c": false,
+        },
+      },
+    },
+  ],
+]
+`;
+
+exports[`restate works ok with ministore 1`] = `
+Array [
+  Array [
+    "a",
+    null,
+  ],
+  Array [
+    "a1",
+    null,
   ],
 ]
 `;

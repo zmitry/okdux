@@ -135,7 +135,10 @@ export class ChangesTracker {
   }
 
   public hasChanges(changedKeys) {
-    if (this.trackedDependencies.length === 0 && !this.computed) {
+    if (
+      (this.trackedDependencies.length === 0 || this.nestedTrackedDependencies.length === 0) &&
+      !this.computed
+    ) {
       return true;
     }
     const res =

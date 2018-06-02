@@ -41,7 +41,7 @@ export class Node extends PureComponent {
       <Consumer
         source={state}
         selector={data => {
-          return { item: { ...data[id] } };
+          return { item: { сounter: data[id].length } };
         }}
         track
       >

@@ -9,8 +9,6 @@ export interface IStore<T> {
 }
 const identity = d => d;
 
-const dispatchCtx = Symbol("dispatchCtx");
-
 const TYPES = {
   SINGLE_SHALLOW: 1,
   SINGLE_TRACK: 2,

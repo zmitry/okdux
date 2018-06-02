@@ -231,3 +231,36 @@ state2.on(
 
 incCounter();
 ```
+
+```
+const event = createEvent();
+
+
+effect.use((userId)=>{
+
+})
+
+const state = createState();
+
+let state;
+state.use(reactState({
+  getState: ()=>state,
+  setState: (newState, cb)=>{
+    state = newState;
+    cb();
+  }
+}))
+
+class List  extends Component {
+  componentWillMount() {
+
+  }
+  shouldComponentUpdate(){
+    return false
+  }
+
+  render() {
+    return{}
+  }
+}
+```

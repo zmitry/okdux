@@ -135,24 +135,13 @@ describe("restate", () => {
     toggle.on(toggleEvent, (state, payload) => !state);
     counter.on(counterEvent, state => state + 1);
     const rootState = createState({ toggle, counter });
-    const reducer = rootState.reducer;
-    const store = createStore(reducer);
+    const store = createStore((...args) => rootState.reducer(...args));
 
-    const toggleViewState = rootState
-      .map(state => {
-        return {
-          toggle: { a: { c: state.toggle } }
-        };
-      })
-      .map(
-        el => (
-          {
-            state: el,
-            toggleEvent: e => dispatch(toggleEvent(e))
-          },
-          true
-        )
-      );
+    const toggleViewState = rootState.map(state => {
+      return {
+        toggle: { a: { c: state.toggle } }
+      };
+    }, true);
     rootState.use(store);
 
     const fn1 = jest.fn();
@@ -163,8 +152,6 @@ describe("restate", () => {
     toggleViewState.subscribe(fn1);
     counter.map(el => el).subscribe(fn2);
 
-    store.dispatch({ type: "init" });
-
     // store.dispatch(toggleEvent());
     // store.dispatch(toggleEvent());
     toggleEvent();
@@ -172,7 +159,7 @@ describe("restate", () => {
     counterEvent();
     counterEvent();
     expect(fn1.mock.calls.length).toBe(1);
-    expect(fn2.mock.calls.length).toBe(4);
+    expect(fn2.mock.calls.length).toBe(3);
     expect(fn2.mock.calls).toMatchSnapshot();
     expect(fn1.mock.calls).toMatchSnapshot();
   });
@@ -195,11 +182,9 @@ describe("restate", () => {
     state.subscribe(() => {});
     const st = common.use(local);
 
-    st.dispatch(e());
-    st.dispatch(e2(1));
-    st.dispatch(e2(5));
+    e(1);
 
-    expect(fn.mock.calls[0][0]).toEqual("a1");
+    expect(fn.mock.calls).toMatchSnapshot();
   });
 
   it("works with lenses", () => {
