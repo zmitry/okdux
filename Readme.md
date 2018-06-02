@@ -148,6 +148,10 @@ render(<App />, document.getElementById("root"));
   rss: 1.6 Mb
 ```
 
+## how to use
+doc soon
+see [tree view example from redux](https://github.com/zhDmitry/restate/tree/master/examples/tree/src)
+
 ## test coverage
 
 ```
