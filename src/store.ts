@@ -3,7 +3,6 @@ import { get, intersection, uniq, flatten, last } from "lodash";
 import { shallowEquals } from "./shallowEquals";
 import { ChangesTracker, getAllKeys, wrapKeys } from "./changesTracker";
 import { LensCreator, makeLens } from "./lens";
-import { STATUS_CODES } from "http";
 
 export interface IStore<T> {
   map: <P>(fn: (data: T, ctx: any) => P) => IStore<P>;
