@@ -48,11 +48,9 @@ exports[`restate works ok with ministore 1`] = `
 Array [
   Array [
     "a",
-    null,
   ],
   Array [
     "a1",
-    null,
   ],
 ]
 `;

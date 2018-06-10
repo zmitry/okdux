@@ -189,10 +189,13 @@ describe("restate", () => {
 
   it("works with lenses", () => {
     const toggle: StandardAction<number> = createAction("TOGGLE");
-    const state = createState({ data: [{ id: 1 }, { id: 2, title: "qwer" }], kek: " 5" });
+    const state = createState({
+      data: [{ id: 1 }, { id: 2 }],
+      kek: " 5"
+    });
     state.on(
       toggle,
-      (payload, prop) => prop.key("data").index(payload),
+      payload => ["data", payload],
       (state, p) => {
         return { ...state, title: "qqq" };
       }

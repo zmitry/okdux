@@ -23,8 +23,8 @@ const events = createActions({
   deleteNode: build.plain
 });
 
-const nodeLens = (nodeId, prop) => prop.index(nodeId);
-const nodeChildLens = ({ id }, prop) => prop.index(id).key("childIds");
+const nodeLens = nodeId => [nodeId];
+const nodeChildLens = ({ id }) => [id, "childIds"];
 
 const state = createState({})
   .on(events.deleteNode, (state, nodeId) => {

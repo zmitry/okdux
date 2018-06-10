@@ -432,7 +432,6 @@ var CombinedReducer = /** @class */ (function (_super) {
                 reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, function (_, p) { return p; });
             }
             stores[el] = reducer;
-            console.log(stores);
             // @ts-ignore
             reducer.setPath(el);
             // @ts-ignore
@@ -645,10 +644,6 @@ var ChangesTracker = /** @class */ (function () {
         this.trackedNestedDeps.clear();
     };
     ChangesTracker.prototype.hasChanges = function (changedKeys) {
-        if ((this.trackedDependencies.length === 0 || this.nestedTrackedDependencies.length === 0) &&
-            !this.computed) {
-            return true;
-        }
         var res = intersection(this.trackedDependencies, changedKeys).length > 0 ||
             ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys);
         return res;
@@ -761,8 +756,7 @@ var Store = /** @class */ (function () {
             return keys[action.type]
                 .map(function (el) {
                 if (typeof el === "function") {
-                    var res = el(action.payload);
-                    return res;
+                    return el(action.payload);
                 }
                 return el;
             })
@@ -797,9 +791,7 @@ var Store = /** @class */ (function () {
         switch (this.type) {
             case TYPES.SINGLE_TRACK:
                 computedData = this.changesTracker.compute(function () { return _this.selector(data); });
-                this.computed = true;
-                this.currentState = computedData;
-                if (!this.changesTracker.hasChanges(keys)) {
+                if (!this.changesTracker.hasChanges(keys) && this.computed) {
                     return;
                 }
                 break;

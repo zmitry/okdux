@@ -20,9 +20,11 @@ function mergeKeys(data, store) {
   for (let action in store.handlers) {
     const actionInfo = store.handlers[action];
     const existingPaths = data[action];
+
     data[action] = existingPaths
       ? [...existingPaths, store.getPath().join(".")]
       : [store.getPath().join(".")];
+
     if (actionInfo && actionInfo.lens) {
       data[action].push(action => {
         return [...store.getPath(), ...actionInfo.lens(action)].join(".");
@@ -121,9 +123,7 @@ export class Store<T> implements IStore<T> {
       return keys[action.type]
         .map(el => {
           if (typeof el === "function") {
-            const res = el(action.payload);
-
-            return res;
+            return el(action.payload);
           }
           return el;
         })
@@ -161,9 +161,7 @@ export class Store<T> implements IStore<T> {
     switch (this.type) {
       case TYPES.SINGLE_TRACK:
         computedData = this.changesTracker.compute(() => this.selector(data));
-        this.computed = true;
-        this.currentState = computedData;
-        if (!this.changesTracker.hasChanges(keys)) {
+        if (!this.changesTracker.hasChanges(keys) && this.computed) {
           return;
         }
         break;

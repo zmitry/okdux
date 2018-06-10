@@ -129,7 +129,6 @@ export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends
         reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, (_, p) => p);
       }
       stores[el] = reducer;
-      console.log(stores);
       // @ts-ignore
       reducer.setPath(el);
       // @ts-ignore

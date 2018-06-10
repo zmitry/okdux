@@ -135,12 +135,6 @@ export class ChangesTracker {
   }
 
   public hasChanges(changedKeys) {
-    if (
-      (this.trackedDependencies.length === 0 || this.nestedTrackedDependencies.length === 0) &&
-      !this.computed
-    ) {
-      return true;
-    }
     const res =
       intersection(this.trackedDependencies, changedKeys).length > 0 ||
       ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys);

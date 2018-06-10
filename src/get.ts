@@ -2,6 +2,7 @@ export type KeyOf<T> = keyof T;
 
 export interface DeepKeyOfArray<T> extends Array<string> {
   ["0"]?: KeyOf<T>;
+
   ["1"]?: this extends {
     ["0"]?: infer K0;
   }
@@ -108,10 +109,8 @@ declare function updateIn<State, Path extends DeepKeyOf<State>>(
   handler: any
 ): (state: State) => DeepTypeOf<State, Path>;
 
-// const obj = {
-//   v: { w: { x: { y: { z: { a: { b: { c: 2 } } } } } } }
-// };
-// const output: number = path(obj, ["v", "w", "x"]); // 💥
+const obj: { [key: number]: number } = [1, 2, 3, 5, 6];
+const output = path(obj, [0]); // 💥
 // const output2: object = path(obj, ["v", "w", "x"]); // ✔️
 // const output4: { c: string } = path(obj, ["v", "w", "x", "y", "z", "a", "b"]); // 💥
 // const output3: { c: number } = path(obj, ["v", "w", "x", "y", "z", "a", "b"]); // ✔️
@@ -135,3 +134,70 @@ declare function updateIn<State, Path extends DeepKeyOf<State>>(
 // path(obj, ["v", "w", "x", "y", "z", "a"]); // ✔️
 // path(obj, ["v", "w", "x", "y", "z", "a", "b"]); // ✔️
 // path(obj, ["v", "w", "x", "y", "z", "a", "b", "c"]); // ✔️
+
+// The '& {}' hereeffectively eliminates undefined from the return type for us.
+export type Defined<T> = T & {};
+export type Prop<T, S extends keyof T> = Defined<T[S]>;
+
+export function get<
+  T,
+  S1 extends keyof Defined<T>,
+  S2 extends keyof Prop<Defined<T>, S1>,
+  S3 extends keyof Prop<Prop<Defined<T>, S1>, S2>,
+  S4 extends keyof Prop<Prop<Prop<Defined<T>, S1>, S2>, S3>,
+  S5 extends keyof Prop<Prop<Prop<Prop<Defined<T>, S1>, S2>, S3>, S4>
+>(
+  obj: T | undefined,
+  prop1: S1,
+  prop2: S2,
+  prop3: S3,
+  prop4: S4,
+  prop5: S5
+): Prop<Prop<Prop<Prop<Defined<T>, S1>, S2>, S3>, S4>[S5] | undefined;
+export function get<
+  T,
+  S1 extends keyof Defined<T>,
+  S2 extends keyof Prop<Defined<T>, S1>,
+  S3 extends keyof Prop<Prop<Defined<T>, S1>, S2>,
+  S4 extends keyof Prop<Prop<Prop<Defined<T>, S1>, S2>, S3>
+>(
+  obj: T | undefined,
+  prop1: S1,
+  prop2: S2,
+  prop3: S3,
+  prop4: S4
+): Prop<Prop<Prop<Defined<T>, S1>, S2>, S3>[S4] | undefined;
+export function get<
+  T,
+  S1 extends keyof Defined<T>,
+  S2 extends keyof Prop<Defined<T>, S1>,
+  S3 extends keyof Prop<Prop<Defined<T>, S1>, S2>
+>(
+  obj: T | undefined,
+  prop1: S1,
+  prop2: S2,
+  prop3: S3
+): Prop<Prop<Defined<T>, S1>, S2>[S3] | undefined;
+export function get<T, S1 extends keyof Defined<T>, S2 extends keyof Prop<Defined<T>, S1>>(
+  obj: T | undefined,
+  prop1: S1,
+  prop2: S2
+): Prop<Defined<T>, S1>[S2] | undefined;
+export function get<T, S1 extends keyof Defined<T>>(
+  obj: T | undefined,
+  prop1: S1
+): Prop<Defined<T>, S1>;
+export function get<T>(obj: T, ...props: string[]): any | undefined {
+  let value: any = obj;
+
+  while (props.length > 0) {
+    if (value == null) return undefined;
+
+    let nextProp = props.shift() as keyof any;
+    value = value[nextProp];
+  }
+
+  return value;
+}
+
+const r = get(obj, "v", "0");

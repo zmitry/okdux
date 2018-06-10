@@ -1,0 +1,7 @@
+enum TYPES {
+  MULTI,
+  SEQ,
+  SINGLE,
+  UPDATE,
+  FILTER
+}
