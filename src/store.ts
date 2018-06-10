@@ -3,6 +3,7 @@ import { get, intersection, uniq, flatten, last } from "lodash";
 import { shallowEquals } from "./shallowEquals";
 import { ChangesTracker, getAllKeys, wrapKeys } from "./changesTracker";
 import { LensCreator, makeLens } from "./lens";
+import { STATUS_CODES } from "http";
 
 export interface IStore<T> {
   map: <P>(fn: (data: T, ctx: any) => P) => IStore<P>;
@@ -24,7 +25,7 @@ function mergeKeys(data, store) {
       : [store.getPath().join(".")];
     if (actionInfo && actionInfo.lens) {
       data[action].push(action => {
-        return [...store.getPath(), ...actionInfo.lens(action, makeLens()).path].join(".");
+        return [...store.getPath(), ...actionInfo.lens(action)].join(".");
       });
     }
   }
@@ -150,7 +151,7 @@ export class Store<T> implements IStore<T> {
   handleChanged(computedData, keys) {
     this.computed = true;
     this.currentState = computedData;
-    this.observers.forEach(el => el.run(computedData, keys));
+    this.observers.forEach(el => el.run && el.run(computedData, keys));
 
     this.reactors.forEach(fn => fn(computedData));
   }
@@ -160,12 +161,14 @@ export class Store<T> implements IStore<T> {
     switch (this.type) {
       case TYPES.SINGLE_TRACK:
         computedData = this.changesTracker.compute(() => this.selector(data));
+        this.computed = true;
+        this.currentState = computedData;
         if (!this.changesTracker.hasChanges(keys)) {
           return;
         }
         break;
       default:
-        computedData = this.selector(data, null);
+        computedData = this.selector(data);
         break;
     }
     if (shallowEquals(this.getState(), computedData)) {
@@ -192,7 +195,7 @@ export function compose(...stores: IStore<any>[]) {
       return;
     }
     // @ts-ignore
-    store.set(stores.map(el => el.getState()), []);
+    store.handleChanged(fn(stores.map(el => el.getState())), []);
   }
   stores.forEach(el => {
     // @ts-ignore

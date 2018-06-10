@@ -19,7 +19,7 @@ export class Consumer extends React.PureComponent<
       this.store = props.source.map(state => {
         return props.selector(state, this.props || props);
       }, props.track);
-      this.state = { currentState: props.selector(props.source.getState()) };
+      this.state = { currentState: props.selector(props.source.getState(), props) };
     } else {
       this.store = props.source;
       this.state = { currentState: this.store.getState() };
@@ -58,4 +58,16 @@ export class Consumer extends React.PureComponent<
 
     this._unsubscribe = null;
   }
+}
+
+export function connect(store, selector) {
+  return Component => {
+    return props => {
+      return (
+        <Consumer source={store} selector={selector} {...props}>
+          {data => <Component {...props} {...data} />}
+        </Consumer>
+      );
+    };
+  };
 }

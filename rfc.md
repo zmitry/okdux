@@ -264,3 +264,18 @@ class List  extends Component {
   }
 }
 ```
+
+```
+const data = computed({
+  completedTodoCount,
+  todosLen,
+  runOnce: () => "hello"
+});
+
+todosLen.compose(completedTodoCount, ([todosCount, completedCount]) => {
+  return {
+    todosCount,
+    completedCount
+  };
+});
+```

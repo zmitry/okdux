@@ -1,6 +1,6 @@
 import { get, intersection } from 'lodash';
 import { combineReducers, createStore } from 'redux';
-import { PureComponent } from 'react';
+import { PureComponent, createElement } from 'react';
 
 /*! *****************************************************************************
 Copyright (c) Microsoft Corporation. All rights reserved.
@@ -27,6 +27,14 @@ function __extends(d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 }
+
+var __assign = Object.assign || function __assign(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+        s = arguments[i];
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+    }
+    return t;
+};
 
 function __values(o) {
     var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
@@ -317,18 +325,6 @@ var objectPathImmutable = createCommonjsModule(function (module) {
 });
 });
 
-function lens(path, prop) {
-    path = typeof prop !== "undefined" && prop !== null ? path.concat(prop) : path;
-    return {
-        key: lens.bind(null, path),
-        index: lens.bind(null, path),
-        path: path
-    };
-}
-function makeLens() {
-    return lens.call(null, [], null);
-}
-
 // function isReducerBuilder(builder) {
 //   return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
 // }
@@ -362,9 +358,9 @@ var BaseReducerBuilder = /** @class */ (function () {
             var handlerObj = _this.handlers[type];
             if (handlerObj && handlerObj.handler) {
                 if (handlerObj.lens) {
-                    var path = handlerObj.lens(payload, makeLens()).path;
+                    var path = handlerObj.lens(payload);
                     var data = get(state, path);
-                    if (data) {
+                    if (typeof data !== "undefined") {
                         var subres = handlerObj.handler(data, payload);
                         state = objectPathImmutable.set(state, path, subres);
                     }
@@ -412,7 +408,6 @@ var BaseReducerBuilder = /** @class */ (function () {
         return this;
     };
     BaseReducerBuilder.prototype.lens = function (action, lens, handler) {
-        var propLens = makeLens();
         this.handlers[action.getType()] = {
             handler: handler,
             lens: lens,
@@ -437,6 +432,7 @@ var CombinedReducer = /** @class */ (function (_super) {
                 reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, function (_, p) { return p; });
             }
             stores[el] = reducer;
+            console.log(stores);
             // @ts-ignore
             reducer.setPath(el);
             // @ts-ignore
@@ -461,11 +457,13 @@ var CombinedReducer = /** @class */ (function (_super) {
     return CombinedReducer;
 }(BaseReducerBuilder));
 function createState(data) {
+    // @ts-ignore
     return new BaseReducerBuilder(data);
 }
 function combineState(data) {
     return new CombinedReducer(data);
 }
+//# sourceMappingURL=createReducer.js.map
 
 function shallowEquals(a, b) {
     if (a === void 0) { a = {}; }
@@ -492,6 +490,7 @@ function shallowEquals(a, b) {
     }
     return true;
 }
+//# sourceMappingURL=shallowEquals.js.map
 
 var trackedFn;
 function buildNestedKeys(trackedNested) {
@@ -646,7 +645,8 @@ var ChangesTracker = /** @class */ (function () {
         this.trackedNestedDeps.clear();
     };
     ChangesTracker.prototype.hasChanges = function (changedKeys) {
-        if (this.trackedDependencies.length === 0 && !this.computed) {
+        if ((this.trackedDependencies.length === 0 || this.nestedTrackedDependencies.length === 0) &&
+            !this.computed) {
             return true;
         }
         var res = intersection(this.trackedDependencies, changedKeys).length > 0 ||
@@ -655,6 +655,7 @@ var ChangesTracker = /** @class */ (function () {
     };
     return ChangesTracker;
 }());
+//# sourceMappingURL=changesTracker.js.map
 
 var identity$1 = function (d) { return d; };
 var TYPES = {
@@ -670,7 +671,7 @@ function mergeKeys(data, store) {
             ? __spread(existingPaths, [store.getPath().join(".")]) : [store.getPath().join(".")];
         if (actionInfo && actionInfo.lens) {
             data[action].push(function (action) {
-                return __spread(store.getPath(), actionInfo.lens(action, makeLens()).path).join(".");
+                return __spread(store.getPath(), actionInfo.lens(action)).join(".");
             });
         }
     };
@@ -787,7 +788,7 @@ var Store = /** @class */ (function () {
     Store.prototype.handleChanged = function (computedData, keys) {
         this.computed = true;
         this.currentState = computedData;
-        this.observers.forEach(function (el) { return el.run(computedData, keys); });
+        this.observers.forEach(function (el) { return el.run && el.run(computedData, keys); });
         this.reactors.forEach(function (fn) { return fn(computedData); });
     };
     Store.prototype.run = function (data, keys) {
@@ -796,12 +797,14 @@ var Store = /** @class */ (function () {
         switch (this.type) {
             case TYPES.SINGLE_TRACK:
                 computedData = this.changesTracker.compute(function () { return _this.selector(data); });
+                this.computed = true;
+                this.currentState = computedData;
                 if (!this.changesTracker.hasChanges(keys)) {
                     return;
                 }
                 break;
             default:
-                computedData = this.selector(data, null);
+                computedData = this.selector(data);
                 break;
         }
         if (shallowEquals(this.getState(), computedData)) {
@@ -831,7 +834,7 @@ function compose() {
             return;
         }
         // @ts-ignore
-        store.set(stores.map(function (el) { return el.getState(); }), []);
+        store.handleChanged(fn(stores.map(function (el) { return el.getState(); })), []);
     }
     stores.forEach(function (el) {
         // @ts-ignore
@@ -893,6 +896,7 @@ function createEffects(actions, prefix) {
     // @ts-ignore
     return createActions(actions, prefix);
 }
+//# sourceMappingURL=createAction.js.map
 
 var Consumer = /** @class */ (function (_super) {
     __extends(Consumer, _super);
@@ -903,7 +907,7 @@ var Consumer = /** @class */ (function (_super) {
             _this.store = props.source.map(function (state) {
                 return props.selector(state, _this.props || props);
             }, props.track);
-            _this.state = { currentState: props.selector(props.source.getState()) };
+            _this.state = { currentState: props.selector(props.source.getState(), props) };
         }
         else {
             _this.store = props.source;
@@ -942,13 +946,27 @@ var Consumer = /** @class */ (function (_super) {
     Consumer.displayName = "StoreConsumer";
     return Consumer;
 }(PureComponent));
+function connect(store, selector) {
+    return function (Component) {
+        return function (props) {
+            return (createElement(Consumer, __assign({ source: store, selector: selector }, props), function (data) { return createElement(Component, __assign({}, props, data)); }));
+        };
+    };
+}
+//# sourceMappingURL=Consumer.js.map
 
 function local(state) {
-    var reducer = state.reducer;
-    var store = createStore(reducer);
+    var store = createStore(function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        return state.reducer.apply(state, __spread(args));
+    });
     state.use(store);
     return store;
 }
+//# sourceMappingURL=ministore.js.map
 
 function createState$1(initialState) {
     if (initialState === undefined) {
@@ -986,5 +1004,6 @@ function createState$1(initialState) {
     // @ts-ignore
     return res2;
 }
+//# sourceMappingURL=index.js.map
 
-export { createState$1 as createState, createAction, build, createActions, createEffects, Store, compose, Consumer, local };
+export { createState$1 as createState, createAction, build, createActions, createEffects, Store, compose, Consumer, connect, local };

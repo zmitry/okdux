@@ -22,3 +22,4 @@ export declare class Consumer extends React.PureComponent<{
     subscribe(): void;
     unsubscribe(): void;
 }
+export declare function connect(store: any, selector: any): (Component: any) => (props: any) => JSX.Element;

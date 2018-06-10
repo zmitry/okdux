@@ -1,10 +1,10 @@
 import { StandardAction, StandardActionPayload } from "./createAction";
-import { LensCreator } from "./lens";
+import { DeepKeyOf, DeepTypeOf } from "./get";
 interface IReducerBuilder<T> {
     select<RootState>(rootState: RootState): T;
     mapState<R, P>(fn: (state: T, props: P) => R): (root: any, props) => R;
     on<E>(event: StandardAction<E>, handler: (state: T, payload: E) => T): IReducerBuilder<T>;
-    on<E, R>(event: StandardAction<E>, lens: (p: E, prop: LensCreator<T, E>) => LensCreator<R, E>, handler: (state: R, payload: E) => R): IReducerBuilder<T>;
+    on<E, R, Key extends DeepKeyOf<T>>(event: StandardAction<E>, lens: (actionPayload: E) => Key, handler: (state: DeepTypeOf<T, Key>, payload: E) => DeepTypeOf<T, Key>): IReducerBuilder<T>;
 }
 declare type Unpacked<T> = T extends IReducerBuilder<infer U> ? U : T extends StandardAction<infer P> ? P : T;
 declare type R<T> = {
@@ -30,7 +30,7 @@ export declare class CombinedReducer<T extends {
 }> extends BaseReducerBuilder<R<T>> {
     constructor(storesToParse: T);
 }
-export declare function createState<T>(data: T): BaseReducerBuilder<T>;
+export declare function createState<T>(data: T): IReducerBuilder<T>;
 export declare function combineState<T extends {
     [i: string]: ReducerOrAction;
 }>(data: T): CombinedReducer<T>;

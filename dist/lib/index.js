@@ -30,6 +30,14 @@
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     }
 
+    var __assign = Object.assign || function __assign(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+        }
+        return t;
+    };
+
     function __values(o) {
         var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
         if (m) return m.call(o);
@@ -319,18 +327,6 @@
     });
     });
 
-    function lens(path, prop) {
-        path = typeof prop !== "undefined" && prop !== null ? path.concat(prop) : path;
-        return {
-            key: lens.bind(null, path),
-            index: lens.bind(null, path),
-            path: path
-        };
-    }
-    function makeLens() {
-        return lens.call(null, [], null);
-    }
-
     // function isReducerBuilder(builder) {
     //   return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
     // }
@@ -364,9 +360,9 @@
                 var handlerObj = _this.handlers[type];
                 if (handlerObj && handlerObj.handler) {
                     if (handlerObj.lens) {
-                        var path = handlerObj.lens(payload, makeLens()).path;
+                        var path = handlerObj.lens(payload);
                         var data = lodash.get(state, path);
-                        if (data) {
+                        if (typeof data !== "undefined") {
                             var subres = handlerObj.handler(data, payload);
                             state = objectPathImmutable.set(state, path, subres);
                         }
@@ -414,7 +410,6 @@
             return this;
         };
         BaseReducerBuilder.prototype.lens = function (action, lens, handler) {
-            var propLens = makeLens();
             this.handlers[action.getType()] = {
                 handler: handler,
                 lens: lens,
@@ -439,6 +434,7 @@
                     reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, function (_, p) { return p; });
                 }
                 stores[el] = reducer;
+                console.log(stores);
                 // @ts-ignore
                 reducer.setPath(el);
                 // @ts-ignore
@@ -463,11 +459,13 @@
         return CombinedReducer;
     }(BaseReducerBuilder));
     function createState(data) {
+        // @ts-ignore
         return new BaseReducerBuilder(data);
     }
     function combineState(data) {
         return new CombinedReducer(data);
     }
+    //# sourceMappingURL=createReducer.js.map
 
     function shallowEquals(a, b) {
         if (a === void 0) { a = {}; }
@@ -494,6 +492,7 @@
         }
         return true;
     }
+    //# sourceMappingURL=shallowEquals.js.map
 
     var trackedFn;
     function buildNestedKeys(trackedNested) {
@@ -648,7 +647,8 @@
             this.trackedNestedDeps.clear();
         };
         ChangesTracker.prototype.hasChanges = function (changedKeys) {
-            if (this.trackedDependencies.length === 0 && !this.computed) {
+            if ((this.trackedDependencies.length === 0 || this.nestedTrackedDependencies.length === 0) &&
+                !this.computed) {
                 return true;
             }
             var res = lodash.intersection(this.trackedDependencies, changedKeys).length > 0 ||
@@ -657,6 +657,7 @@
         };
         return ChangesTracker;
     }());
+    //# sourceMappingURL=changesTracker.js.map
 
     var identity$1 = function (d) { return d; };
     var TYPES = {
@@ -672,7 +673,7 @@
                 ? __spread(existingPaths, [store.getPath().join(".")]) : [store.getPath().join(".")];
             if (actionInfo && actionInfo.lens) {
                 data[action].push(function (action) {
-                    return __spread(store.getPath(), actionInfo.lens(action, makeLens()).path).join(".");
+                    return __spread(store.getPath(), actionInfo.lens(action)).join(".");
                 });
             }
         };
@@ -789,7 +790,7 @@
         Store.prototype.handleChanged = function (computedData, keys) {
             this.computed = true;
             this.currentState = computedData;
-            this.observers.forEach(function (el) { return el.run(computedData, keys); });
+            this.observers.forEach(function (el) { return el.run && el.run(computedData, keys); });
             this.reactors.forEach(function (fn) { return fn(computedData); });
         };
         Store.prototype.run = function (data, keys) {
@@ -798,12 +799,14 @@
             switch (this.type) {
                 case TYPES.SINGLE_TRACK:
                     computedData = this.changesTracker.compute(function () { return _this.selector(data); });
+                    this.computed = true;
+                    this.currentState = computedData;
                     if (!this.changesTracker.hasChanges(keys)) {
                         return;
                     }
                     break;
                 default:
-                    computedData = this.selector(data, null);
+                    computedData = this.selector(data);
                     break;
             }
             if (shallowEquals(this.getState(), computedData)) {
@@ -833,7 +836,7 @@
                 return;
             }
             // @ts-ignore
-            store.set(stores.map(function (el) { return el.getState(); }), []);
+            store.handleChanged(fn(stores.map(function (el) { return el.getState(); })), []);
         }
         stores.forEach(function (el) {
             // @ts-ignore
@@ -895,6 +898,7 @@
         // @ts-ignore
         return createActions(actions, prefix);
     }
+    //# sourceMappingURL=createAction.js.map
 
     var Consumer = /** @class */ (function (_super) {
         __extends(Consumer, _super);
@@ -905,7 +909,7 @@
                 _this.store = props.source.map(function (state) {
                     return props.selector(state, _this.props || props);
                 }, props.track);
-                _this.state = { currentState: props.selector(props.source.getState()) };
+                _this.state = { currentState: props.selector(props.source.getState(), props) };
             }
             else {
                 _this.store = props.source;
@@ -944,13 +948,27 @@
         Consumer.displayName = "StoreConsumer";
         return Consumer;
     }(React.PureComponent));
+    function connect(store, selector) {
+        return function (Component) {
+            return function (props) {
+                return (React.createElement(Consumer, __assign({ source: store, selector: selector }, props), function (data) { return React.createElement(Component, __assign({}, props, data)); }));
+            };
+        };
+    }
+    //# sourceMappingURL=Consumer.js.map
 
     function local(state) {
-        var reducer = state.reducer;
-        var store = redux.createStore(reducer);
+        var store = redux.createStore(function () {
+            var args = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                args[_i] = arguments[_i];
+            }
+            return state.reducer.apply(state, __spread(args));
+        });
         state.use(store);
         return store;
     }
+    //# sourceMappingURL=ministore.js.map
 
     function createState$1(initialState) {
         if (initialState === undefined) {
@@ -988,6 +1006,7 @@
         // @ts-ignore
         return res2;
     }
+    //# sourceMappingURL=index.js.map
 
     exports.createState = createState$1;
     exports.createAction = createAction;
@@ -997,6 +1016,7 @@
     exports.Store = Store;
     exports.compose = compose;
     exports.Consumer = Consumer;
+    exports.connect = connect;
     exports.local = local;
 
     Object.defineProperty(exports, '__esModule', { value: true });

@@ -1,8 +1,8 @@
 import { get } from "lodash";
 import { combineReducers, compose } from "redux";
 import im from "object-path-immutable";
-import { StandardAction, StandardActionPayload } from "./createAction";
-import { LensCreator, makeLens } from "./lens";
+import { StandardAction, StandardActionPayload, createAction, build } from "./createAction";
+import { DeepKeyOf, DeepTypeOf } from "./get";
 
 // function isReducerBuilder(builder) {
 //   return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
@@ -14,10 +14,10 @@ interface IReducerBuilder<T> {
   select<RootState>(rootState: RootState): T;
   mapState<R, P>(fn: (state: T, props: P) => R): (root: any, props) => R;
   on<E>(event: StandardAction<E>, handler: (state: T, payload: E) => T): IReducerBuilder<T>;
-  on<E, R>(
+  on<E, R, Key extends DeepKeyOf<T>>(
     event: StandardAction<E>,
-    lens: (p: E, prop: LensCreator<T, E>) => LensCreator<R, E>,
-    handler: (state: R, payload: E) => R
+    lens: (actionPayload: E) => Key,
+    handler: (state: DeepTypeOf<T, Key>, payload: E) => DeepTypeOf<T, Key>
   ): IReducerBuilder<T>;
 }
 
@@ -68,7 +68,6 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
     return this;
   }
   lens(action, lens, handler) {
-    const propLens = makeLens();
     this.handlers[action.getType()] = {
       handler,
       lens,
@@ -93,10 +92,10 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
     const handlerObj = this.handlers[type];
     if (handlerObj && handlerObj.handler) {
       if (handlerObj.lens) {
-        const path = handlerObj.lens(payload, makeLens()).path;
+        const path = handlerObj.lens(payload);
         const data = get(state, path);
 
-        if (data) {
+        if (typeof data !== "undefined") {
           const subres = handlerObj.handler(data, payload);
           state = im.set(state, path, subres);
         }
@@ -130,7 +129,7 @@ export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends
         reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, (_, p) => p);
       }
       stores[el] = reducer;
-
+      console.log(stores);
       // @ts-ignore
       reducer.setPath(el);
       // @ts-ignore
@@ -154,7 +153,8 @@ export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends
   }
 }
 
-export function createState<T>(data: T) {
+export function createState<T>(data: T): IReducerBuilder<T> {
+  // @ts-ignore
   return new BaseReducerBuilder<T>(data);
 }
 export function combineState<T extends { [i: string]: ReducerOrAction }>(data: T) {
