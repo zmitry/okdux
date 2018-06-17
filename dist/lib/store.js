@@ -22,9 +22,7 @@ var __spread = (this && this.__spread) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var shallowEquals_1 = require("./shallowEquals");
 var changesTracker_1 = require("./changesTracker");
-var lens_1 = require("./lens");
 var identity = function (d) { return d; };
-var dispatchCtx = Symbol("dispatchCtx");
 var TYPES = {
     SINGLE_SHALLOW: 1,
     SINGLE_TRACK: 2,
@@ -38,7 +36,7 @@ function mergeKeys(data, store) {
             ? __spread(existingPaths, [store.getPath().join(".")]) : [store.getPath().join(".")];
         if (actionInfo && actionInfo.lens) {
             data[action].push(function (action) {
-                return __spread(store.getPath(), actionInfo.lens(action, lens_1.makeLens()).path).join(".");
+                return __spread(store.getPath(), actionInfo.lens(action)).join(".");
             });
         }
     };
@@ -128,8 +126,7 @@ var Store = /** @class */ (function () {
             return keys[action.type]
                 .map(function (el) {
                 if (typeof el === "function") {
-                    var res = el(action.payload);
-                    return res;
+                    return el(action.payload);
                 }
                 return el;
             })
@@ -155,7 +152,7 @@ var Store = /** @class */ (function () {
     Store.prototype.handleChanged = function (computedData, keys) {
         this.computed = true;
         this.currentState = computedData;
-        this.observers.forEach(function (el) { return el.run(computedData, keys); });
+        this.observers.forEach(function (el) { return el.run && el.run(computedData, keys); });
         this.reactors.forEach(function (fn) { return fn(computedData); });
     };
     Store.prototype.run = function (data, keys) {
@@ -164,12 +161,12 @@ var Store = /** @class */ (function () {
         switch (this.type) {
             case TYPES.SINGLE_TRACK:
                 computedData = this.changesTracker.compute(function () { return _this.selector(data); });
-                if (!this.changesTracker.hasChanges(keys)) {
+                if (!this.changesTracker.hasChanges(keys) && this.computed) {
                     return;
                 }
                 break;
             default:
-                computedData = this.selector(data, null);
+                computedData = this.selector(data);
                 break;
         }
         if (shallowEquals_1.shallowEquals(this.getState(), computedData)) {
@@ -179,8 +176,8 @@ var Store = /** @class */ (function () {
     };
     Store.prototype.set = function (data, keys) {
         if (this.root) {
-            keys = this.getState() ? keys : changesTracker_1.getAllKeys(data);
-            changesTracker_1.wrapKeys(keys, data);
+            // keys = this.getState() ? keys : getAllKeys(data);
+            // wrapKeys(keys, data);
         }
         this.run(data, keys);
     };
@@ -200,7 +197,7 @@ function compose() {
             return;
         }
         // @ts-ignore
-        store.set(stores.map(function (el) { return el.getState(); }), []);
+        store.handleChanged(fn(stores.map(function (el) { return el.getState(); })), []);
     }
     stores.forEach(function (el) {
         // @ts-ignore
@@ -209,4 +206,12 @@ function compose() {
     return store;
 }
 exports.compose = compose;
+// function computed(...stores) {
+//   const computeObj = stores.pop();
+//   compose(...stores, (data)=>{
+//     return {
+//     }
+//   })
+//   const store = new Store();
+// }
 //# sourceMappingURL=store.js.map

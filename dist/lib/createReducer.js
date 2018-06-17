@@ -13,7 +13,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var lodash_1 = require("lodash");
 var redux_1 = require("redux");
 var object_path_immutable_1 = require("object-path-immutable");
-var lens_1 = require("./lens");
 // function isReducerBuilder(builder) {
 //   return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
 // }
@@ -47,9 +46,9 @@ var BaseReducerBuilder = /** @class */ (function () {
             var handlerObj = _this.handlers[type];
             if (handlerObj && handlerObj.handler) {
                 if (handlerObj.lens) {
-                    var path = handlerObj.lens(payload, lens_1.makeLens()).path;
+                    var path = handlerObj.lens(payload);
                     var data = lodash_1.get(state, path);
-                    if (data) {
+                    if (typeof data !== "undefined") {
                         var subres = handlerObj.handler(data, payload);
                         state = object_path_immutable_1.default.set(state, path, subres);
                     }
@@ -97,7 +96,6 @@ var BaseReducerBuilder = /** @class */ (function () {
         return this;
     };
     BaseReducerBuilder.prototype.lens = function (action, lens, handler) {
-        var propLens = lens_1.makeLens();
         this.handlers[action.getType()] = {
             handler: handler,
             lens: lens,
@@ -148,6 +146,7 @@ var CombinedReducer = /** @class */ (function (_super) {
 }(BaseReducerBuilder));
 exports.CombinedReducer = CombinedReducer;
 function createState(data) {
+    // @ts-ignore
     return new BaseReducerBuilder(data);
 }
 exports.createState = createState;

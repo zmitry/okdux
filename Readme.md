@@ -162,3 +162,10 @@ File               |  % Stmts | % Branch |  % Funcs |  % Lines | Uncovered Line 
 All files          |    93.02 |    86.11 |    87.37 |    93.08 |                   |
 -------------------|----------|----------|----------|----------|-------------------|
 ```
+
+## todo
+
+1.  improve types
+2.  extend api with (comparators and computed see rfc.md)
+3.  improve tests
+4.  think about async actions

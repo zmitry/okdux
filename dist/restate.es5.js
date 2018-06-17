@@ -459,10 +459,6 @@ function createState(data) {
     // @ts-ignore
     return new BaseReducerBuilder(data);
 }
-function combineState(data) {
-    return new CombinedReducer(data);
-}
-//# sourceMappingURL=createReducer.js.map
 
 function shallowEquals(a, b) {
     if (a === void 0) { a = {}; }
@@ -489,7 +485,6 @@ function shallowEquals(a, b) {
     }
     return true;
 }
-//# sourceMappingURL=shallowEquals.js.map
 
 var trackedFn;
 function buildNestedKeys(trackedNested) {
@@ -516,21 +511,6 @@ function checkKeyUsage(fn) {
     fn.deps = null;
     return res;
 }
-function getAllKeys(data, key) {
-    if (key === void 0) { key = null; }
-    var keys = [];
-    key && keys.push(key);
-    if (Array.isArray(data)) {
-        return keys;
-    }
-    if (typeof data === "object") {
-        for (var i in data) {
-            var res = getAllKeys(data[i], (key ? key + "." : "") + i);
-            keys = keys.concat(res);
-        }
-    }
-    return keys;
-}
 var SKIP_WALK_AFTER = 20;
 function walkThrowKeys(data, key) {
     if (key === void 0) { key = null; }
@@ -549,40 +529,6 @@ function walkThrowKeys(data, key) {
             walkThrowKeys(el);
         }
     }
-}
-function wrapKeys(keys, data) {
-    try {
-        for (var keys_1 = __values(keys), keys_1_1 = keys_1.next(); !keys_1_1.done; keys_1_1 = keys_1.next()) {
-            var keyPath = keys_1_1.value;
-            var path = keyPath.split(".");
-            // eslint-disable-next-line
-            path.reduce(function (parent, prop) {
-                var obj = get(data, parent, data) || data;
-                var valueProp = obj[prop];
-                var pathToProp = __spread(parent, [prop]);
-                if (typeof obj !== "object") {
-                    return pathToProp;
-                }
-                Reflect.defineProperty(obj, prop, {
-                    configurable: true,
-                    enumerable: true,
-                    get: function () {
-                        trackedFn && trackedFn.deps.push(pathToProp.join("."));
-                        return valueProp;
-                    }
-                });
-                return pathToProp;
-            }, []);
-        }
-    }
-    catch (e_1_1) { e_1 = { error: e_1_1 }; }
-    finally {
-        try {
-            if (keys_1_1 && !keys_1_1.done && (_a = keys_1.return)) _a.call(keys_1);
-        }
-        finally { if (e_1) throw e_1.error; }
-    }
-    var e_1, _a;
 }
 var ChangesTracker = /** @class */ (function () {
     function ChangesTracker() {
@@ -650,7 +596,6 @@ var ChangesTracker = /** @class */ (function () {
     };
     return ChangesTracker;
 }());
-//# sourceMappingURL=changesTracker.js.map
 
 var identity$1 = function (d) { return d; };
 var TYPES = {
@@ -806,8 +751,8 @@ var Store = /** @class */ (function () {
     };
     Store.prototype.set = function (data, keys) {
         if (this.root) {
-            keys = this.getState() ? keys : getAllKeys(data);
-            wrapKeys(keys, data);
+            // keys = this.getState() ? keys : getAllKeys(data);
+            // wrapKeys(keys, data);
         }
         this.run(data, keys);
     };
@@ -834,6 +779,14 @@ function compose() {
     });
     return store;
 }
+// function computed(...stores) {
+//   const computeObj = stores.pop();
+//   compose(...stores, (data)=>{
+//     return {
+//     }
+//   })
+//   const store = new Store();
+// }
 
 var mutator = function (defaultValue) { return function (name) {
     var dispatchers = new Set();
@@ -888,7 +841,6 @@ function createEffects(actions, prefix) {
     // @ts-ignore
     return createActions(actions, prefix);
 }
-//# sourceMappingURL=createAction.js.map
 
 var Consumer = /** @class */ (function (_super) {
     __extends(Consumer, _super);
@@ -945,7 +897,6 @@ function connect(store, selector) {
         };
     };
 }
-//# sourceMappingURL=Consumer.js.map
 
 function local(state) {
     var store = createStore(function () {
@@ -958,27 +909,27 @@ function local(state) {
     state.use(store);
     return store;
 }
-//# sourceMappingURL=ministore.js.map
 
 function createState$1(initialState) {
     if (initialState === undefined) {
         throw new Error("initial state cannot be undefined");
     }
-    var reducer;
-    if (typeof initialState === "object") {
-        var firstKey = Object.keys(initialState)[0];
-        if (initialState[firstKey] &&
-            (initialState[firstKey].reducer || initialState[firstKey].getType)) {
-            // @ts-ignore
-            reducer = combineState(initialState);
-        }
-        else {
-            reducer = createState(initialState);
-        }
-    }
-    else {
-        reducer = createState(initialState);
-    }
+    var reducer = createState(initialState);
+    // let reducer
+    // if (typeof initialState === "object") {
+    //   const firstKey = Object.keys(initialState)[0];
+    //   if (
+    //     initialState[firstKey] &&
+    //     (initialState[firstKey].reducer || initialState[firstKey].getType)
+    //   ) {
+    //     // @ts-ignore
+    //     reducer = combineState(initialState);
+    //   } else {
+    //     reducer = state(initialState);
+    //   }
+    // } else {
+    //   reducer = state(initialState);
+    // }
     // @ts-ignore
     var store = new Store(reducer.select);
     var res = Object.assign(reducer, store);
@@ -996,6 +947,5 @@ function createState$1(initialState) {
     // @ts-ignore
     return res2;
 }
-//# sourceMappingURL=index.js.map
 
 export { createState$1 as createState, createAction, build, createActions, createEffects, Store, compose, Consumer, connect, local };

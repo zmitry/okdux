@@ -200,3 +200,13 @@ export function compose(...stores: IStore<any>[]) {
   });
   return store;
 }
+
+// function computed(...stores) {
+//   const computeObj = stores.pop();
+//   compose(...stores, (data)=>{
+//     return {
+
+//     }
+//   })
+//   const store = new Store();
+// }

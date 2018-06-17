@@ -188,9 +188,6 @@ var ChangesTracker = /** @class */ (function () {
         this.trackedNestedDeps.clear();
     };
     ChangesTracker.prototype.hasChanges = function (changedKeys) {
-        if (this.trackedDependencies.length === 0 && !this.computed) {
-            return true;
-        }
         var res = lodash_1.intersection(this.trackedDependencies, changedKeys).length > 0 ||
             ChangesTracker.hasNestedChanges(this.trackedNestedDeps, changedKeys);
         return res;

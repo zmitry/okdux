@@ -9,6 +9,14 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __assign = (this && this.__assign) || Object.assign || function(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+        s = arguments[i];
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+            t[p] = s[p];
+    }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var React = require("react");
 var Consumer = /** @class */ (function (_super) {
@@ -20,7 +28,7 @@ var Consumer = /** @class */ (function (_super) {
             _this.store = props.source.map(function (state) {
                 return props.selector(state, _this.props || props);
             }, props.track);
-            _this.state = { currentState: props.selector(props.source.getState()) };
+            _this.state = { currentState: props.selector(props.source.getState(), props) };
         }
         else {
             _this.store = props.source;
@@ -60,4 +68,12 @@ var Consumer = /** @class */ (function (_super) {
     return Consumer;
 }(React.PureComponent));
 exports.Consumer = Consumer;
+function connect(store, selector) {
+    return function (Component) {
+        return function (props) {
+            return (React.createElement(Consumer, __assign({ source: store, selector: selector }, props), function (data) { return React.createElement(Component, __assign({}, props, data)); }));
+        };
+    };
+}
+exports.connect = connect;
 //# sourceMappingURL=Consumer.js.map

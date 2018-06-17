@@ -30,7 +30,8 @@
     "semantic-release": "semantic-release",
     "semantic-release-prepare": "ts-node tools/semantic-release-prepare",
     "precommit": "lint-staged",
-    "bench": "node --experimental-modules --expose-gc bench/bench.js"
+    "bench": "node --experimental-modules --expose-gc bench/bench.js",
+    "bench2": "matcha ./bench/suite.js"
   },
   "lint-staged": {
     "{src,test}/**/*.tsx?": [
@@ -118,6 +119,8 @@
   },
   "dependencies": {
     "@types/react": "^16.3.16",
+    "effector": "^0.17.7",
+    "matcha": "^0.7.0",
     "mobx": "^4.3.0",
     "object-path-immutable": "^1.0.2"
   }
