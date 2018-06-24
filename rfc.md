@@ -292,3 +292,7 @@ function* mySaga() {
   });
 }
 ```
+
+```js
+const data = data => {};
+```

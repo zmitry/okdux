@@ -1,8 +1,7 @@
 import { IReducerBuilder, createState as state, combineState, R } from "./createReducer";
-import { Store, IStore } from "./store";
 import { createAction, StandardAction } from "./createAction";
 
-export function createState<T>(initialState: T): IReducerBuilder<R<T>> & IStore<R<T>> {
+export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
   if (initialState === undefined) {
     throw new Error("initial state cannot be undefined");
   }
@@ -21,26 +20,39 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> & IStore<
   } else {
     reducer = state(initialState);
   }
-  // @ts-ignore
-  const store = new Store(reducer.select);
-  const res = Object.assign(reducer, store);
 
-  // @ts-ignore
-  const res2 = Object.assign(res, {
-    use: store.use.bind(res),
-    set: store.set.bind(res),
-    run: store.run.bind(res),
-    handleChanged: store.handleChanged.bind(res),
-    addStore: store.addStore.bind(res),
-    map: store.map.bind(res),
-    getState: store.getState.bind(res),
-    subscribe: store.subscribe.bind(res)
+  return Object.assign(reducer, {
+    use: use.bind(null, reducer)
   });
-  // @ts-ignore
-  return res2;
+}
+
+function forEachStore(stores, fn) {
+  for (let item in stores) {
+    if (stores[item]) {
+      fn(stores[item]);
+      if (stores[item].stores) {
+        fn(stores[item].stores);
+      }
+    }
+  }
+}
+
+function forEachAction(store, fn) {
+  for (let item in store.handlers) {
+    fn(store.handlers[item]);
+  }
+}
+
+function use(store, dispatch) {
+  forEachAction(store, data => {
+    data.action._dispatchers.add(dispatch);
+  });
+  forEachStore(store.stores, el => {
+    forEachAction(el, data => {
+      data.action._dispatchers.add(dispatch);
+    });
+  });
 }
 
 export * from "./createAction";
-export * from "./store";
-export * from "./Consumer";
-export * from "./ministore";
+export * from "./selector";

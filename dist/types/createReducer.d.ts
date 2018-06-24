@@ -24,13 +24,14 @@ export declare class BaseReducerBuilder<T> implements IReducerBuilder<T> {
     mapState: (fn?: <T>(d: T, ..._: any[]) => T) => (state: any, props: any) => any;
     reducer: <P>(state: T, action: StandardActionPayload<P>) => T;
 }
-export declare type ReducerOrAction = BaseReducerBuilder<any> | StandardAction<any>;
+export declare type ReducerOrAction = BaseReducerBuilder<any> | CombinedReducer<any> | StandardAction<any>;
 export declare class CombinedReducer<T extends {
     [i: string]: ReducerOrAction;
 }> extends BaseReducerBuilder<R<T>> {
+    stores: any;
     constructor(storesToParse: T);
 }
-export declare function createState<T>(data: T): IReducerBuilder<T>;
+export declare function createState<T>(data: T): BaseReducerBuilder<T>;
 export declare function combineState<T extends {
     [i: string]: ReducerOrAction;
 }>(data: T): CombinedReducer<T>;

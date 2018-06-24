@@ -9,6 +9,7 @@ import { DeepKeyOf, DeepTypeOf } from "./get";
 // }
 
 let identity = <T>(d: T, ..._: any[]): T => d;
+let identity2 = <T>(_, d: T): T => d;
 
 interface IReducerBuilder<T> {
   select<RootState>(rootState: RootState): T;
@@ -108,52 +109,41 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
     return state;
   };
 }
+export type ReducerOrAction = BaseReducerBuilder<any> | CombinedReducer<any> | StandardAction<any>;
 
-export type ReducerOrAction = BaseReducerBuilder<any> | StandardAction<any>;
 export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends BaseReducerBuilder<
   R<T>
 > {
+  stores: any;
   constructor(storesToParse: T) {
     super({} as any);
 
     const parent = { getPath: this.getPath.bind(this) };
     const stores = {};
-    // @ts-ignore
-    this.stores = stores;
+    const reducersMap = {};
+    this.stores = stores as any;
     Object.keys(storesToParse).forEach(el => {
       let reducer = storesToParse[el];
 
-      // @ts-ignore
-      if (reducer && reducer.getType) {
-        // @ts-ignore
-        reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, (_, p) => p);
+      if (reducer && (reducer as StandardAction<any>).getType) {
+        reducer = reducer as StandardAction<any>;
+        reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, identity2);
       }
-      stores[el] = reducer;
-      // @ts-ignore
-      reducer.setPath(el);
-      // @ts-ignore
-      reducer.parent = parent;
+      stores[el] = reducer as BaseReducerBuilder<any>;
+      stores[el].setPath(el);
+      stores[el].parent = parent;
+      reducersMap[el] = stores[el].reducer;
     });
 
-    const reducersMap = Object.keys(stores).reduce((acc, el) => {
-      // @ts-ignore
-      acc[el] = stores[el].reducer;
-      return acc;
-    }, {});
-
-    // @ts-ignore
     const nestedReducer = combineReducers(reducersMap);
     const plainReducer = this.reducer;
-    // @ts-ignore
-    this.reducer = (state = this.initialState, action) => {
-      // @ts-ignore
-      return plainReducer(nestedReducer(state, action), action);
+    this.reducer = (state, action) => {
+      return plainReducer(nestedReducer(state, action) as any, action);
     };
   }
 }
 
-export function createState<T>(data: T): IReducerBuilder<T> {
-  // @ts-ignore
+export function createState<T>(data: T) {
   return new BaseReducerBuilder<T>(data);
 }
 export function combineState<T extends { [i: string]: ReducerOrAction }>(data: T) {

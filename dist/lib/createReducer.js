@@ -23,6 +23,7 @@ var identity = function (d) {
     }
     return d;
 };
+var identity2 = function (_, d) { return d; };
 var BaseReducerBuilder = /** @class */ (function () {
     function BaseReducerBuilder(initialState) {
         var _this = this;
@@ -111,33 +112,22 @@ var CombinedReducer = /** @class */ (function (_super) {
         var _this = _super.call(this, {}) || this;
         var parent = { getPath: _this.getPath.bind(_this) };
         var stores = {};
-        // @ts-ignore
+        var reducersMap = {};
         _this.stores = stores;
         Object.keys(storesToParse).forEach(function (el) {
             var reducer = storesToParse[el];
-            // @ts-ignore
             if (reducer && reducer.getType) {
-                // @ts-ignore
-                reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, function (_, p) { return p; });
+                reducer = reducer;
+                reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, identity2);
             }
             stores[el] = reducer;
-            // @ts-ignore
-            reducer.setPath(el);
-            // @ts-ignore
-            reducer.parent = parent;
+            stores[el].setPath(el);
+            stores[el].parent = parent;
+            reducersMap[el] = stores[el].reducer;
         });
-        var reducersMap = Object.keys(stores).reduce(function (acc, el) {
-            // @ts-ignore
-            acc[el] = stores[el].reducer;
-            return acc;
-        }, {});
-        // @ts-ignore
         var nestedReducer = redux_1.combineReducers(reducersMap);
         var plainReducer = _this.reducer;
-        // @ts-ignore
         _this.reducer = function (state, action) {
-            if (state === void 0) { state = _this.initialState; }
-            // @ts-ignore
             return plainReducer(nestedReducer(state, action), action);
         };
         return _this;
@@ -146,7 +136,6 @@ var CombinedReducer = /** @class */ (function (_super) {
 }(BaseReducerBuilder));
 exports.CombinedReducer = CombinedReducer;
 function createState(data) {
-    // @ts-ignore
     return new BaseReducerBuilder(data);
 }
 exports.createState = createState;
