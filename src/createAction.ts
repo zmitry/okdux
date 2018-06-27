@@ -7,25 +7,22 @@ export type StandardAction<T> = {
 };
 
 const mutator = <T>(defaultValue: T) => (name: string): StandardAction<T> => {
-  const dispatchers = new Set();
-
   const actionRaw = (data = defaultValue) => {
     return { type: name, payload: data };
   };
   const action: any = (data = defaultValue) => {
     const action = actionRaw(data);
-    dispatchers.forEach(fn => {
-      fn(action);
-    });
+    actionMeta.dispatch && actionMeta.dispatch(action);
     return action;
   };
-
-  return Object.assign(action, {
+  var actionMeta = {
     getType: () => name,
     defaultValue,
-    _dispatchers: dispatchers,
+    dispatch: d => {},
     raw: actionRaw
-  });
+  };
+
+  return Object.assign(action, actionMeta);
 };
 
 const createAction = mutator(null);

@@ -415,7 +415,6 @@ function combineState(data) {
 }
 
 var mutator = function (defaultValue) { return function (name) {
-    var dispatchers = new Set();
     var actionRaw = function (data) {
         if (data === void 0) { data = defaultValue; }
         return { type: name, payload: data };
@@ -423,17 +422,16 @@ var mutator = function (defaultValue) { return function (name) {
     var action = function (data) {
         if (data === void 0) { data = defaultValue; }
         var action = actionRaw(data);
-        dispatchers.forEach(function (fn) {
-            fn(action);
-        });
+        actionMeta.dispatch && actionMeta.dispatch(action);
         return action;
     };
-    return Object.assign(action, {
+    var actionMeta = {
         getType: function () { return name; },
         defaultValue: defaultValue,
-        _dispatchers: dispatchers,
+        dispatch: function (d) { },
         raw: actionRaw
-    });
+    };
+    return Object.assign(action, actionMeta);
 }; };
 var createAction = mutator(null);
 function createAsyncAction(name) {
@@ -3034,13 +3032,12 @@ function forEachAction(store, fn) {
     }
 }
 function use(store, dispatch) {
-    forEachAction(store, function (data) {
-        data.action._dispatchers.add(dispatch);
-    });
+    var setDispatch = function (data) {
+        data.action.dispatch = dispatch;
+    };
+    forEachAction(store, setDispatch);
     forEachStore(store.stores, function (el) {
-        forEachAction(el, function (data) {
-            data.action._dispatchers.add(dispatch);
-        });
+        forEachAction(el, setDispatch);
     });
 }
 

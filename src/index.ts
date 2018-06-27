@@ -44,13 +44,12 @@ function forEachAction(store, fn) {
 }
 
 function use(store, dispatch) {
-  forEachAction(store, data => {
-    data.action._dispatchers.add(dispatch);
-  });
+  const setDispatch = data => {
+    data.action.dispatch = dispatch;
+  };
+  forEachAction(store, setDispatch);
   forEachStore(store.stores, el => {
-    forEachAction(el, data => {
-      data.action._dispatchers.add(dispatch);
-    });
+    forEachAction(el, setDispatch);
   });
 }
 
