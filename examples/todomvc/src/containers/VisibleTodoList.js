@@ -1,10 +1,9 @@
 import TodoList from "../components/TodoList";
-import { connect, compose } from "../../../../";
 import { actions } from "../state";
 import { visibleTodos } from "../selectors";
 
-const VisibleTodoList = connect(visibleTodos, data => ({
-  filteredTodosIds: data,
+const VisibleTodoList = visibleTodos.connect(data => ({
+  filteredTodos: data,
   actions
 }))(TodoList);
 

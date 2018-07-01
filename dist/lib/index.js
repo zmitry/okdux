@@ -610,7 +610,13 @@ function createComputed() {
     var fn = args.pop();
     // @ts-ignore
     var selector = lib_4(args.map(function (el) { return el.select; }), fn);
-    var connector = function (fn) { return connect(function (state) { return fn(selector(state)); }); };
+    var connector = function (fn) {
+        var connectSelector = lib_4(selector, function (_, p) { return p; }, function (state, props) { return fn(state, props); });
+        return connect(function (state, p) {
+            //@ts-ignore
+            return connectSelector(state, p);
+        });
+    };
     return {
         select: selector,
         connect: connector,

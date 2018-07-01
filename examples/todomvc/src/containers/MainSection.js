@@ -1,18 +1,18 @@
-import { connect, compose } from "../../../../";
+import { createComputed } from "../../../../";
 import MainSection from "../components/MainSection.js";
-import { todosState, actions } from "../state";
-import { completedTodoCount } from "../selectors";
+import { actions } from "../state";
+import { completedTodoCount, todosEntities } from "../selectors";
 
-const todosLen = todosState.map(el => el.todos).map(el => el.length);
-
-const data = todosLen.compose(completedTodoCount, ([todosCount, completedCount]) => {
-  return {
-    todosCount,
+const computed = createComputed(
+  todosEntities,
+  completedTodoCount,
+  (todosEntities, completedCount) => ({
+    todosCount: todosEntities.length,
     completedCount
-  };
-});
+  })
+);
 
-export default connect(data, d => ({
+export default computed.connect(d => ({
   ...d,
   actions
 }))(MainSection);

@@ -19,7 +19,7 @@ const initialState = [
   }
 ];
 
-const todos = createState(initialState)
+export const todos = createState(initialState)
   .on(actions.addTodo, (state, text) => [
     ...state,
     {
