@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+var identity = function (d) { return d; };
 var mutator = function (defaultValue) { return function (name) {
+    var dispatch = null;
     var actionRaw = function (data) {
         if (data === void 0) { data = defaultValue; }
         return { type: name, payload: data };
@@ -8,13 +10,15 @@ var mutator = function (defaultValue) { return function (name) {
     var action = function (data) {
         if (data === void 0) { data = defaultValue; }
         var action = actionRaw(data);
-        actionMeta.dispatch && actionMeta.dispatch(action);
+        dispatch && dispatch(action);
         return action;
     };
     var actionMeta = {
         getType: function () { return name; },
         defaultValue: defaultValue,
-        dispatch: function (d) { },
+        setDispatch: function (d) {
+            dispatch = d;
+        },
         raw: actionRaw
     };
     return Object.assign(action, actionMeta);

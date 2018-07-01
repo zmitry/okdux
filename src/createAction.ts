@@ -6,19 +6,24 @@ export type StandardAction<T> = {
   getType(): string;
 };
 
+const identity = d => d;
 const mutator = <T>(defaultValue: T) => (name: string): StandardAction<T> => {
+  let dispatch = null;
+
   const actionRaw = (data = defaultValue) => {
     return { type: name, payload: data };
   };
   const action: any = (data = defaultValue) => {
     const action = actionRaw(data);
-    actionMeta.dispatch && actionMeta.dispatch(action);
+    dispatch && dispatch(action);
     return action;
   };
-  var actionMeta = {
+  const actionMeta = {
     getType: () => name,
     defaultValue,
-    dispatch: d => {},
+    setDispatch(d) {
+      dispatch = d;
+    },
     raw: actionRaw
   };
 

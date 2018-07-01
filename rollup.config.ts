@@ -17,7 +17,7 @@ export default {
   ],
   sourcemap: true,
   // Indicate here external modules you don't wanna include in your bundle (i.e.: 'lodash')
-  external: ["redux", "lodash", "react", "create-subscription"],
+  external: ["redux", "lodash", "react", "create-subscription", "react-redux"],
   watch: {
     include: "src/**"
   },

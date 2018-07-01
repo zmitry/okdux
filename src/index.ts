@@ -21,9 +21,8 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
     reducer = state(initialState);
   }
 
-  return Object.assign(reducer, {
-    use: use.bind(null, reducer)
-  });
+  reducer.use = dispatch => use(reducer, dispatch);
+  return reducer;
 }
 
 function forEachStore(stores, fn) {
@@ -31,7 +30,7 @@ function forEachStore(stores, fn) {
     if (stores[item]) {
       fn(stores[item]);
       if (stores[item].stores) {
-        fn(stores[item].stores);
+        forEachStore(stores[item].stores, fn);
       }
     }
   }
@@ -45,7 +44,7 @@ function forEachAction(store, fn) {
 
 function use(store, dispatch) {
   const setDispatch = data => {
-    data.action.dispatch = dispatch;
+    data.action.setDispatch(dispatch);
   };
   forEachAction(store, setDispatch);
   forEachStore(store.stores, el => {
