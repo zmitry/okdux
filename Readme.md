@@ -32,14 +32,19 @@ import { createActions, createState, build } from "@kraken97/restate";
 const actions = createActions({
   inc: build.plain
 });
+
+const countersState = createState([[0, 0, 0, 0]]);
 // different types of counters
-const state = createState({ counters: [0, 0, 0, 0] });
+const state = createState({ counters: countersState });
 state.on(actions.inc, (state, p) => {
   return state + 1;
 });
 
 //[OPTIONAL] auto bind all actions to redux
-const store = state.use(store.dispatch);
+// store is redux store
+state.use(store.dispatch);
+
+countersState.select(store.getState()); // will return state from root
 
 // dispatch actions
 // all actions are autobinded to store after using .use action
