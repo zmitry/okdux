@@ -1,12 +1,6 @@
 import { get } from "lodash";
 import { combineReducers, compose } from "redux";
-import im from "object-path-immutable";
 import { StandardAction, StandardActionPayload, createAction, build } from "./createAction";
-import { DeepKeyOf, DeepTypeOf } from "./get";
-
-// function isReducerBuilder(builder) {
-//   return builder && typeof builder === "object" && Reflect.has(builder, reducerPathSymbol);
-// }
 
 let identity = <T>(d: T, ..._: any[]): T => d;
 let identity2 = <T>(_, d: T): T => d;
@@ -15,11 +9,6 @@ interface IReducerBuilder<T> {
   select<RootState>(rootState: RootState): T;
   mapState<R, P>(fn: (state: T, props: P) => R): (root: any, props) => R;
   on<E>(event: StandardAction<E>, handler: (state: T, payload: E) => T): IReducerBuilder<T>;
-  on<E, R, Key extends DeepKeyOf<T>>(
-    event: StandardAction<E>,
-    lens: (actionPayload: E) => Key,
-    handler: (state: DeepTypeOf<T, Key>, payload: E) => DeepTypeOf<T, Key>
-  ): IReducerBuilder<T>;
 }
 
 type Unpacked<T> = T extends IReducerBuilder<infer U>
@@ -92,18 +81,8 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
     const { type, payload } = action;
     const handlerObj = this.handlers[type];
     if (handlerObj && handlerObj.handler) {
-      if (handlerObj.lens) {
-        const path = handlerObj.lens(payload);
-        const data = get(state, path);
-
-        if (typeof data !== "undefined") {
-          const subres = handlerObj.handler(data, payload);
-          state = im.set(state, path, subres);
-        }
-      } else {
-        const handler = this.handlers[type].handler;
-        state = handler(state, payload, action);
-      }
+      const handler = this.handlers[type].handler;
+      state = handler(state, payload, action);
     }
 
     return state;

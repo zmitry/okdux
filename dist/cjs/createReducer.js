@@ -1,3 +1,4 @@
+"use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
@@ -8,8 +9,9 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-import { get } from "lodash";
-import { combineReducers } from "redux";
+Object.defineProperty(exports, "__esModule", { value: true });
+var lodash_1 = require("lodash");
+var redux_1 = require("redux");
 var identity = function (d) {
     var _ = [];
     for (var _i = 1; _i < arguments.length; _i++) {
@@ -25,7 +27,7 @@ var BaseReducerBuilder = /** @class */ (function () {
         this.handlers = {};
         this.select = function (rs) {
             var path = _this.getPath();
-            return path.length ? get(rs, _this.getPath()) : rs;
+            return path.length ? lodash_1.get(rs, _this.getPath()) : rs;
         };
         // @ts-ignore
         this.mapState = function (fn) {
@@ -89,7 +91,7 @@ var BaseReducerBuilder = /** @class */ (function () {
     };
     return BaseReducerBuilder;
 }());
-export { BaseReducerBuilder };
+exports.BaseReducerBuilder = BaseReducerBuilder;
 var CombinedReducer = /** @class */ (function (_super) {
     __extends(CombinedReducer, _super);
     function CombinedReducer(storesToParse) {
@@ -109,7 +111,7 @@ var CombinedReducer = /** @class */ (function (_super) {
             stores[el].parent = parent;
             reducersMap[el] = stores[el].reducer;
         });
-        var nestedReducer = combineReducers(reducersMap);
+        var nestedReducer = redux_1.combineReducers(reducersMap);
         var plainReducer = _this.reducer;
         _this.reducer = function (state, action) {
             return plainReducer(nestedReducer(state, action), action);
@@ -118,11 +120,13 @@ var CombinedReducer = /** @class */ (function (_super) {
     }
     return CombinedReducer;
 }(BaseReducerBuilder));
-export { CombinedReducer };
-export function createState(data) {
+exports.CombinedReducer = CombinedReducer;
+function createState(data) {
     return new BaseReducerBuilder(data);
 }
-export function combineState(data) {
+exports.createState = createState;
+function combineState(data) {
     return new CombinedReducer(data);
 }
+exports.combineState = combineState;
 //# sourceMappingURL=createReducer.js.map

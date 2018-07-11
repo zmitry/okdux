@@ -1,5 +1,10 @@
-import { createState as state, combineState } from "./createReducer";
-export function createState(initialState) {
+"use strict";
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+var createReducer_1 = require("./createReducer");
+function createState(initialState) {
     if (initialState === undefined) {
         throw new Error("initial state cannot be undefined");
     }
@@ -9,18 +14,19 @@ export function createState(initialState) {
         if (initialState[firstKey] &&
             (initialState[firstKey].reducer || initialState[firstKey].getType)) {
             // @ts-ignore
-            reducer = combineState(initialState);
+            reducer = createReducer_1.combineState(initialState);
         }
         else {
-            reducer = state(initialState);
+            reducer = createReducer_1.createState(initialState);
         }
     }
     else {
-        reducer = state(initialState);
+        reducer = createReducer_1.createState(initialState);
     }
     reducer.use = function (dispatch) { return use(reducer, dispatch); };
     return reducer;
 }
+exports.createState = createState;
 function forEachStore(stores, fn) {
     for (var item in stores) {
         if (stores[item]) {
@@ -45,5 +51,5 @@ function use(store, dispatch) {
         forEachAction(el, setDispatch);
     });
 }
-export * from "./createAction";
+__export(require("./createAction"));
 //# sourceMappingURL=index.js.map

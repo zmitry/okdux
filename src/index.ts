@@ -53,4 +53,3 @@ function use(store, dispatch) {
 }
 
 export * from "./createAction";
-export * from "./selector";

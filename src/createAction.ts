@@ -24,6 +24,7 @@ const mutator = <T>(defaultValue: T) => (name: string): StandardAction<T> => {
     setDispatch(d) {
       dispatch = d;
     },
+    getDispatch: ()=>dispatch,
     raw: actionRaw
   };
 

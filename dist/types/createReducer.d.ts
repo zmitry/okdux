@@ -1,10 +1,8 @@
 import { StandardAction, StandardActionPayload } from "./createAction";
-import { DeepKeyOf, DeepTypeOf } from "./get";
 interface IReducerBuilder<T> {
     select<RootState>(rootState: RootState): T;
     mapState<R, P>(fn: (state: T, props: P) => R): (root: any, props) => R;
     on<E>(event: StandardAction<E>, handler: (state: T, payload: E) => T): IReducerBuilder<T>;
-    on<E, R, Key extends DeepKeyOf<T>>(event: StandardAction<E>, lens: (actionPayload: E) => Key, handler: (state: DeepTypeOf<T, Key>, payload: E) => DeepTypeOf<T, Key>): IReducerBuilder<T>;
 }
 declare type Unpacked<T> = T extends IReducerBuilder<infer U> ? U : T extends StandardAction<infer P> ? P : T;
 declare type R<T> = {
