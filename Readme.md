@@ -27,27 +27,20 @@ see [tree view example from redux](https://github.com/zhDmitry/restate/tree/mast
 [![Play kxr5vy1x6v](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/kxr5vy1x6v)
 
 ```js
-import { createAction, createState, createComputed } from "@kraken97/restate";
-const inc = createAction("Increment counters");
+import { createActions, createState, build } from "@kraken97/restate";
+
+const actions = createActions({
+  inc: build.plain
+});
 // different types of counters
 const state = createState({ counters: [0, 0, 0, 0] });
-state.on(
-  inc,
-  (counterIndex, prop) => prop.key("counters").index(counterIndex),
-  (state, p) => {
-    // updating nested data
-    return state + 1;
-  }
-);
+state.on(actions.inc, (state, p) => {
+  return state + 1;
+});
 
-// connect store to event sources in this example to basic redux
-const store = state.use(local);
+//[OPTIONAL] auto bind all actions to redux
+const store = state.use(store.dispatch);
 
-// compute data from our store
-// it will recompute our value only when data changes
-const computed = createComputed(state, data => ({ data: data }));
-
-computed.connect(d => ({ ...d }))(data => <div>{data}</div>);
 // dispatch actions
 // all actions are autobinded to store after using .use action
 // you can assign one action to multiple stores
