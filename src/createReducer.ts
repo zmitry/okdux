@@ -6,6 +6,7 @@ let identity = <T>(d: T, ..._: any[]): T => d;
 let identity2 = <T>(_, d: T): T => d;
 
 interface IReducerBuilder<T> {
+  stores: WrappedValues<T>;
   select<RootState>(rootState: RootState): T;
   mapState<R, P>(fn: (state: T, props: P) => R): (root: any, props) => R;
   on<E>(event: StandardAction<E>, handler: (state: T, payload: E) => T): IReducerBuilder<T>;
@@ -13,9 +14,15 @@ interface IReducerBuilder<T> {
 
 type Unpacked<T> = T extends IReducerBuilder<infer U>
   ? U
-  : T extends StandardAction<infer P> ? P : T;
+  : T extends StandardAction<infer P> ? P : T extends (...args: any[]) => infer R ? R : T;
 
 type R<T> = { [P in keyof T]: Unpacked<T[P]> };
+
+enum Keys {
+  select,
+  mapState
+}
+type WrappedValues<T> = { [P in keyof T]: Pick<IReducerBuilder<T[P]>, keyof typeof Keys> };
 
 export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
   public handlers = {};
@@ -41,28 +48,15 @@ export class BaseReducerBuilder<T> implements IReducerBuilder<T> {
   }
 
   // @ts-ignore
-  on<E>(action: StandardAction<E>, handlerOrLens, handler = null) {
-    if (handler) {
-      this.lens(action, handlerOrLens, handler);
-      return this;
-    } else {
-      handler = handlerOrLens;
-    }
+  on<E>(action: StandardAction<E>, handler) {
     if (action === undefined || action === null || !action.getType) {
-      throw new Error("action should be an action, got " + action);
+      throw new Error("action should be an action type, got " + action);
     }
     this.handlers[action.getType()] = {
       handler,
       action
     };
     return this;
-  }
-  lens(action, lens, handler) {
-    this.handlers[action.getType()] = {
-      handler,
-      lens,
-      action
-    };
   }
 
   select = <R>(rs: R) => {
@@ -107,6 +101,10 @@ export class CombinedReducer<T extends { [i: string]: ReducerOrAction }> extends
       if (reducer && (reducer as StandardAction<any>).getType) {
         reducer = reducer as StandardAction<any>;
         reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, identity2);
+      } else if (typeof reducer === "function") {
+        const tmpReducer = new BaseReducerBuilder(null);
+        tmpReducer.reducer = reducer;
+        reducer = tmpReducer;
       }
       stores[el] = reducer as BaseReducerBuilder<any>;
       stores[el].setPath(el);
@@ -129,4 +127,4 @@ export function combineState<T extends { [i: string]: ReducerOrAction }>(data: T
   return new CombinedReducer<T>(data);
 }
 
-export { R, Unpacked, IReducerBuilder };
+export { R, Unpacked, IReducerBuilder, WrappedValues, Keys };

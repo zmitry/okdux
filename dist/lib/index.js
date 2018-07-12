@@ -7,7 +7,9 @@ export function createState(initialState) {
     if (typeof initialState === "object") {
         var firstKey = Object.keys(initialState)[0];
         if (initialState[firstKey] &&
-            (initialState[firstKey].reducer || initialState[firstKey].getType)) {
+            (initialState[firstKey].reducer ||
+                initialState[firstKey].getType ||
+                typeof initialState[firstKey] === "function")) {
             // @ts-ignore
             reducer = combineState(initialState);
         }
@@ -31,6 +33,13 @@ function forEachStore(stores, fn) {
         }
     }
 }
+var reducer = function (state, action) {
+    if (state === void 0) { state = { user: "qwer" }; }
+    return state;
+};
+var st = createState({
+    reducer: reducer
+});
 function forEachAction(store, fn) {
     for (var item in store.handlers) {
         fn(store.handlers[item]);

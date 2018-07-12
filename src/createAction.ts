@@ -24,7 +24,7 @@ const mutator = <T>(defaultValue: T) => (name: string): StandardAction<T> => {
     setDispatch(d) {
       dispatch = d;
     },
-    getDispatch: ()=>dispatch,
+    getDispatch: () => dispatch,
     raw: actionRaw
   };
 
@@ -61,7 +61,7 @@ const build = {
 
 export type Unpack<T> = T extends StandardAction<infer F> ? F : any;
 
-function createActions<T extends { [M in keyof T]: T[M] }>(
+function createActions<T extends { [M in keyof T]: (...args: any[]) => any }>(
   actions: T,
   prefix: string = "@"
 ): { [M in keyof T]: StandardAction<Unpack<ReturnType<T[M]>>> } {

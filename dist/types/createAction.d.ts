@@ -24,7 +24,7 @@ declare const build: {
 };
 export declare type Unpack<T> = T extends StandardAction<infer F> ? F : any;
 declare function createActions<T extends {
-    [M in keyof T]: T[M];
+    [M in keyof T]: (...args: any[]) => any;
 }>(actions: T, prefix?: string): {
     [M in keyof T]: StandardAction<Unpack<ReturnType<T[M]>>>;
 };

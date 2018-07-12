@@ -18,6 +18,11 @@ var identity = function (d) {
     return d;
 };
 var identity2 = function (_, d) { return d; };
+var Keys;
+(function (Keys) {
+    Keys[Keys["select"] = 0] = "select";
+    Keys[Keys["mapState"] = 1] = "mapState";
+})(Keys || (Keys = {}));
 var BaseReducerBuilder = /** @class */ (function () {
     function BaseReducerBuilder(initialState) {
         var _this = this;
@@ -62,30 +67,15 @@ var BaseReducerBuilder = /** @class */ (function () {
         }
     };
     // @ts-ignore
-    BaseReducerBuilder.prototype.on = function (action, handlerOrLens, handler) {
-        if (handler === void 0) { handler = null; }
-        if (handler) {
-            this.lens(action, handlerOrLens, handler);
-            return this;
-        }
-        else {
-            handler = handlerOrLens;
-        }
+    BaseReducerBuilder.prototype.on = function (action, handler) {
         if (action === undefined || action === null || !action.getType) {
-            throw new Error("action should be an action, got " + action);
+            throw new Error("action should be an action type, got " + action);
         }
         this.handlers[action.getType()] = {
             handler: handler,
             action: action
         };
         return this;
-    };
-    BaseReducerBuilder.prototype.lens = function (action, lens, handler) {
-        this.handlers[action.getType()] = {
-            handler: handler,
-            lens: lens,
-            action: action
-        };
     };
     return BaseReducerBuilder;
 }());
@@ -103,6 +93,11 @@ var CombinedReducer = /** @class */ (function (_super) {
             if (reducer && reducer.getType) {
                 reducer = reducer;
                 reducer = new BaseReducerBuilder(reducer.defaultValue).on(reducer, identity2);
+            }
+            else if (typeof reducer === "function") {
+                var tmpReducer = new BaseReducerBuilder(null);
+                tmpReducer.reducer = reducer;
+                reducer = tmpReducer;
             }
             stores[el] = reducer;
             stores[el].setPath(el);
@@ -125,4 +120,5 @@ export function createState(data) {
 export function combineState(data) {
     return new CombinedReducer(data);
 }
+export { Keys };
 //# sourceMappingURL=createReducer.js.map

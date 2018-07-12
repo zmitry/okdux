@@ -10,7 +10,9 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
     const firstKey = Object.keys(initialState)[0];
     if (
       initialState[firstKey] &&
-      (initialState[firstKey].reducer || initialState[firstKey].getType)
+      (initialState[firstKey].reducer ||
+        initialState[firstKey].getType ||
+        typeof initialState[firstKey] === "function")
     ) {
       // @ts-ignore
       reducer = combineState(initialState);
@@ -35,6 +37,12 @@ function forEachStore(stores, fn) {
     }
   }
 }
+
+const reducer = (state = { user: "qwer" }, action) => state;
+
+const st = createState({
+  reducer
+});
 
 function forEachAction(store, fn) {
   for (let item in store.handlers) {
