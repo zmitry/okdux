@@ -1,6 +1,6 @@
 {
   "name": "@kraken97/restate",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "description": "",
   "keywords": [],
   "main": "dist/cjs/index.js",
@@ -15,7 +15,7 @@
   "scripts": {
     "lint": "tslint -t codeFrame 'src/**/*.ts' 'test/**/*.ts'",
     "prebuild": "rimraf dist",
-    "build": "tsc --module commonjs && tsc --module es2015 ",
+    "build": "tsc --module commonjs --outDir ./dist/cjs && tsc --module es2015 ",
     "start": "rollup -c rollup.config.ts -w",
     "test": "jest",
     "test:watch": "jest --watch",
