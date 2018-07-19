@@ -1,7 +1,7 @@
 {
-  "name": "@kraken97/restate",
-  "version": "3.2.2",
-  "description": "",
+  "name": "okdux",
+  "version": "3.2.3",
+  "description": "redux made ok",
   "keywords": [],
   "main": "dist/cjs/index.js",
   "module": "dist/lib/index.js",
