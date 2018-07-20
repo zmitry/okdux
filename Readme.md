@@ -1,4 +1,4 @@
-# Restate
+# Okdux
 
 [![CircleCI](https://circleci.com/gh/zhDmitry/restate.svg?style=svg)](https://circleci.com/gh/zhDmitry/restate)
 [![NPM Downloads](https://img.shields.io/npm/dm/@kraken97/restate.svg?style=flat)](https://www.npmjs.com/package/@kraken97/restate)
@@ -17,7 +17,7 @@ This lib was created for reducing pain from redux boilerplaite.
 ## install
 
 ```
-yarn add @kraken97/restate
+yarn add okdux
 ```
 
 ## how to use
