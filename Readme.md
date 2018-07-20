@@ -1,7 +1,7 @@
 # Okdux
 
 [![CircleCI](https://circleci.com/gh/zhDmitry/restate.svg?style=svg)](https://circleci.com/gh/zhDmitry/okdux)
-[![NPM Downloads](https://img.shields.io/npm/dm/okdux.svg?style=flat)](https://www.npmjs.com/package/@kraken97/restate)
+[![NPM Downloads](https://img.shields.io/npm/dm/@kraken97/restate.svg?style=flat)](https://www.npmjs.com/package/okdux)
 
 ## Into
 
