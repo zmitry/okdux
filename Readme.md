@@ -174,7 +174,7 @@ state.createStore(reducer => createStore(reducer, {}));
 state.createStore(createStore);
 ```
 
-### `StateBuilder.rest(action): StateBuilder`
+### `StateBuilder.reset(action): StateBuilder`
 
 reset reducer value to default
 same as `state.on(action, ()=>initialValue)`
