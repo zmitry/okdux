@@ -1,9 +1,9 @@
-import { createState as state, combineState } from "./createReducer";
+import { CombinedReducer, BaseReducerBuilder } from "./state";
 export function createState(initialState) {
     if (initialState === undefined) {
         throw new Error("initial state cannot be undefined");
     }
-    var reducer;
+    var state;
     if (typeof initialState === "object") {
         var firstKey = Object.keys(initialState)[0];
         if (initialState[firstKey] &&
@@ -11,17 +11,24 @@ export function createState(initialState) {
                 initialState[firstKey].getType ||
                 typeof initialState[firstKey] === "function")) {
             // @ts-ignore
-            reducer = combineState(initialState);
+            state = new CombinedReducer(initialState);
         }
         else {
-            reducer = state(initialState);
+            state = new BaseReducerBuilder(initialState);
         }
     }
     else {
-        reducer = state(initialState);
+        state = new BaseReducerBuilder(initialState);
     }
-    reducer.use = function (dispatch) { return use(reducer, dispatch); };
-    return reducer;
+    state.use = function (dispatch) { return use(state, dispatch); };
+    state.createStore = function (fn) {
+        var store = fn(state.reducer, state);
+        if (!store) {
+            throw new Error("you must return store from createStore method");
+        }
+        use(state, store.dispatch);
+    };
+    return state;
 }
 function forEachStore(stores, fn) {
     for (var item in stores) {
@@ -33,13 +40,6 @@ function forEachStore(stores, fn) {
         }
     }
 }
-var reducer = function (state, action) {
-    if (state === void 0) { state = { user: "qwer" }; }
-    return state;
-};
-var st = createState({
-    reducer: reducer
-});
 function forEachAction(store, fn) {
     for (var item in store.handlers) {
         fn(store.handlers[item]);
@@ -54,5 +54,5 @@ function use(store, dispatch) {
         forEachAction(el, setDispatch);
     });
 }
-export * from "./createAction";
+export * from "./action";
 //# sourceMappingURL=index.js.map

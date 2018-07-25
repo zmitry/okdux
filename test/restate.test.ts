@@ -1,5 +1,4 @@
-import { createState, combineState } from "../src/createReducer";
-import { createAction, build } from "../src/createAction";
+import { createState, createAction, build } from "../src";
 
 describe("restate", () => {
   let a;
@@ -13,8 +12,8 @@ describe("restate", () => {
     toggle = createAction("toggle");
     a = createState("a");
     b = createState(true);
-    c = combineState({ a, b });
-    d = combineState({ c });
+    c = createState({ a, b });
+    d = createState({ c });
     rootReducer = d.reducer;
   });
   it("works basic", () => {
@@ -22,7 +21,7 @@ describe("restate", () => {
     let a = createState("a");
     expect(() => createState()).toThrowError(Error);
     expect(a.reducer()).toBe("a");
-    let b = combineState({ a, toggle });
+    let b = createState({ a, toggle });
 
     expect(b.reducer()).toEqual({ a: "a", toggle: true });
   });
@@ -59,7 +58,7 @@ describe("restate", () => {
   it("works with subpath", () => {
     a = createState("a");
     b = createState(true);
-    c = combineState({ a, b });
+    c = createState({ a, b });
     c.setPath("name");
     const reducer = c.reducer;
     expect(a.select({ name: { a: "a" } })).toBe("a");

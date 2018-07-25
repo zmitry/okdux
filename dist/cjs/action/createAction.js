@@ -1,5 +1,7 @@
-var identity = function (d) { return d; };
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var mutator = function (defaultValue) { return function (name) {
+    if (name === void 0) { name = Symbol(); }
     var dispatch = null;
     var actionRaw = function (data) {
         if (data === void 0) { data = defaultValue; }
@@ -23,6 +25,7 @@ var mutator = function (defaultValue) { return function (name) {
     return Object.assign(action, actionMeta);
 }; };
 var createAction = mutator(null);
+exports.createAction = createAction;
 function createAsyncAction(name) {
     return {
         request: createAction(name + "_REQUEST"),
@@ -33,26 +36,22 @@ function createAsyncAction(name) {
 var build = {
     plain: createAction,
     action: function () {
-        // @ts-ignore
-        return createAction(name);
+        return function (name) { return createAction(name); };
     },
     mutator: mutator,
     async: function () { return function (name) {
         return createAsyncAction(name);
     }; }
 };
+exports.build = build;
 function createActions(actions, prefix) {
     if (prefix === void 0) { prefix = "@"; }
-    // @ts-ignore
     return Object.keys(actions).reduce(function (acc, el) {
         acc[el] = actions[el](prefix + "/" + el);
         return acc;
     }, {});
 }
-function createEffects(actions, prefix) {
-    if (prefix === void 0) { prefix = "@"; }
-    // @ts-ignore
-    return createActions(actions, prefix);
-}
-export { createAction, build, createActions, createEffects };
+exports.createActions = createActions;
+var createEffects = createActions;
+exports.createEffects = createEffects;
 //# sourceMappingURL=createAction.js.map

@@ -3,12 +3,12 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-var createReducer_1 = require("./createReducer");
+var state_1 = require("./state");
 function createState(initialState) {
     if (initialState === undefined) {
         throw new Error("initial state cannot be undefined");
     }
-    var reducer;
+    var state;
     if (typeof initialState === "object") {
         var firstKey = Object.keys(initialState)[0];
         if (initialState[firstKey] &&
@@ -16,17 +16,24 @@ function createState(initialState) {
                 initialState[firstKey].getType ||
                 typeof initialState[firstKey] === "function")) {
             // @ts-ignore
-            reducer = createReducer_1.combineState(initialState);
+            state = new state_1.CombinedReducer(initialState);
         }
         else {
-            reducer = createReducer_1.createState(initialState);
+            state = new state_1.BaseReducerBuilder(initialState);
         }
     }
     else {
-        reducer = createReducer_1.createState(initialState);
+        state = new state_1.BaseReducerBuilder(initialState);
     }
-    reducer.use = function (dispatch) { return use(reducer, dispatch); };
-    return reducer;
+    state.use = function (dispatch) { return use(state, dispatch); };
+    state.createStore = function (fn) {
+        var store = fn(state.reducer, state);
+        if (!store) {
+            throw new Error("you must return store from createStore method");
+        }
+        use(state, store.dispatch);
+    };
+    return state;
 }
 exports.createState = createState;
 function forEachStore(stores, fn) {
@@ -39,13 +46,6 @@ function forEachStore(stores, fn) {
         }
     }
 }
-var reducer = function (state, action) {
-    if (state === void 0) { state = { user: "qwer" }; }
-    return state;
-};
-var st = createState({
-    reducer: reducer
-});
 function forEachAction(store, fn) {
     for (var item in store.handlers) {
         fn(store.handlers[item]);
@@ -60,5 +60,5 @@ function use(store, dispatch) {
         forEachAction(el, setDispatch);
     });
 }
-__export(require("./createAction"));
+__export(require("./action"));
 //# sourceMappingURL=index.js.map

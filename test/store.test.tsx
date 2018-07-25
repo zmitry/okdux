@@ -18,13 +18,17 @@ describe("restate", () => {
   it("works with use dispatch", () => {
     const state = createState(0);
     const action = createAction("a");
-    state.on(action, () => 5);
+    const resetAct = createAction("reset");
+
+    state.on(action, () => 5).reset(resetAct);
     const store = createStore(state.reducer);
     action(0);
     expect(store.getState()).toBe(0);
     state.use(store.dispatch);
     action(0);
     expect(store.getState()).toBe(5);
+    resetAct();
+    expect(store.getState()).toBe(0);
   });
 
   it("should work with plain reducers", () => {

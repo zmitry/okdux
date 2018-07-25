@@ -1,11 +1,10 @@
-import { IReducerBuilder, createState as state, combineState, R } from "./createReducer";
-import { createAction, StandardAction } from "./createAction";
+import { IReducerBuilder, CombinedReducer, BaseReducerBuilder, R } from "./state";
 
 export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
   if (initialState === undefined) {
     throw new Error("initial state cannot be undefined");
   }
-  let reducer;
+  let state;
   if (typeof initialState === "object") {
     const firstKey = Object.keys(initialState)[0];
     if (
@@ -15,16 +14,24 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
         typeof initialState[firstKey] === "function")
     ) {
       // @ts-ignore
-      reducer = combineState(initialState);
+      state = new CombinedReducer(initialState);
     } else {
-      reducer = state(initialState);
+      state = new BaseReducerBuilder(initialState);
     }
   } else {
-    reducer = state(initialState);
+    state = new BaseReducerBuilder(initialState);
   }
 
-  reducer.use = dispatch => use(reducer, dispatch);
-  return reducer;
+  state.use = dispatch => use(state, dispatch);
+  state.createStore = fn => {
+    const store = fn(state.reducer, state);
+    if (!store) {
+      throw new Error("you must return store from createStore method");
+    }
+    use(state, store.dispatch);
+  };
+
+  return state;
 }
 
 function forEachStore(stores, fn) {
@@ -37,12 +44,6 @@ function forEachStore(stores, fn) {
     }
   }
 }
-
-const reducer = (state = { user: "qwer" }, action) => state;
-
-const st = createState({
-  reducer
-});
 
 function forEachAction(store, fn) {
   for (let item in store.handlers) {
@@ -60,4 +61,4 @@ function use(store, dispatch) {
   });
 }
 
-export * from "./createAction";
+export * from "./action";
