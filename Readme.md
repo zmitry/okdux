@@ -71,13 +71,6 @@ inc(8);
 
 ## API
 
-### `createDecorator: (...calculations: Calculation[]) => Decorator`
-
-A function that takes a set of calculations and returns a 🏁 Final Form
-[`Decorator`](https://github.com/final-form/final-form#decorator-form-formapi--unsubscribe).
-
-## Types
-
 ### `createState({ //plain obj or different state }) => StateBuilder`
 
 create state from plain object or compose from different state
