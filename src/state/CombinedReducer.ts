@@ -30,7 +30,6 @@ export class CombinedReducer<T extends { [i: string]: any }> extends BaseReducer
         tmpReducer.reducer = storeCandidate;
         storeCandidate = tmpReducer;
       }
-      console.log("storeCandidate: ", storeCandidate);
 
       stores[el] = storeCandidate as BaseReducerBuilder<any>;
       stores[el].setPath(el);
@@ -41,7 +40,8 @@ export class CombinedReducer<T extends { [i: string]: any }> extends BaseReducer
     const nestedReducer = combineReducers(reducersMap);
     const plainReducer = this.reducer;
     this.reducer = (state, action) => {
-      return plainReducer(nestedReducer(state, action) as any, action);
+      //@ts-ignore
+      return plainReducer({...state, ...nestedReducer(state, action)}, action);
     };
   }
 }
