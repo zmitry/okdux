@@ -41,7 +41,7 @@ export class CombinedReducer<T extends { [i: string]: any }> extends BaseReducer
     const plainReducer = this.reducer;
     this.reducer = (state, action) => {
       //@ts-ignore
-      return plainReducer({...state, ...nestedReducer(state, action)}, action);
+      return plainReducer(nestedReducer(state, action), action);
     };
   }
 }
