@@ -9,7 +9,7 @@
   "author": "Dima Zherebko <kraken@live.ru>",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/zhDmitry/okdux"
   },
   "license": "MIT",
   "scripts": {
