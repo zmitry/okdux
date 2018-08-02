@@ -2,10 +2,11 @@ import { StandardAction } from "../action";
 
 export interface IReducerBuilder<T> {
   stores: WrappedValues<T>;
+  select<R, P>(fn: (state: T, props?: P) => R): (root: any, props) => R;
   select<RootState>(rootState: RootState): T;
-  select<R, P>(fn: (state: T, props: P) => R): (root: any, props) => R;
   on<E>(event: StandardAction<E>, handler: (state: T, payload: E) => T): IReducerBuilder<T>;
   reset<E>(event: StandardAction<E>): IReducerBuilder<T>;
+  thru<R extends IReducerBuilder<T>>(fn: (...r: any[]) => R): R;
 }
 
 export type Unpacked<T> = T extends IReducerBuilder<infer U>

@@ -40,6 +40,7 @@ var BaseReducerBuilder = /** @class */ (function () {
             }
             return state;
         };
+        this.thru = function (fn) { return fn(_this); };
         if (typeof initialState === "undefined") {
             throw new Error("initial state should not be undefined");
         }

@@ -15,4 +15,5 @@ export declare class BaseReducerBuilder<T> {
     mapState: (fn?: <T>(d: T, ..._: any[]) => T) => (state: any, props: any) => any;
     reset: (action: any) => void;
     reducer: <P>(state: T, action: StandardActionPayload<P>) => T;
+    thru: (fn: any) => any;
 }

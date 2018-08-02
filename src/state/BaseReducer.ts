@@ -71,4 +71,6 @@ export class BaseReducerBuilder<T> {
 
     return state;
   };
+
+  thru = fn => fn(this);
 }
