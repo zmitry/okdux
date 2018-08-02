@@ -1,6 +1,6 @@
 {
   "name": "okdux",
-  "version": "3.7.2",
+  "version": "3.7.3",
   "description": "redux made ok",
   "keywords": [],
   "main": "dist/cjs/index.js",
@@ -9,7 +9,7 @@
   "author": "Dima Zherebko <kraken@live.ru>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zhDmitry/okdux"
+    "url": "https://github.com/zhDmitry/okdux.git"
   },
   "license": "MIT",
   "scripts": {
