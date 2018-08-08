@@ -5,7 +5,7 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
     throw new Error("initial state cannot be undefined");
   }
   let state;
-  if (typeof initialState === "object") {
+  if (initialState && typeof initialState === "object") {
     const firstKey = Object.keys(initialState)[0];
     if (
       initialState[firstKey] &&
