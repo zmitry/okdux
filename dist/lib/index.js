@@ -4,7 +4,7 @@ export function createState(initialState) {
         throw new Error("initial state cannot be undefined");
     }
     var state;
-    if (typeof initialState === "object") {
+    if (initialState && typeof initialState === "object") {
         var firstKey = Object.keys(initialState)[0];
         if (initialState[firstKey] &&
             (initialState[firstKey].reducer ||

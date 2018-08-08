@@ -8,9 +8,16 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
     return t;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var get_1 = require("lodash/get");
 var helpers_1 = require("./helpers");
 exports.reducerSymbol = Symbol();
+function get(object, keys) {
+    keys = Array.isArray(keys) ? keys : keys.split(".");
+    object = object[keys[0]];
+    if (object && keys.length > 1) {
+        return get(object, keys.slice(1));
+    }
+    return object;
+}
 function isReducer(reducer) {
     return reducer && reducer[exports.reducerSymbol];
 }
@@ -26,7 +33,7 @@ var BaseReducerBuilder = /** @class */ (function () {
                 return _this.mapState(rs);
             }
             var path = _this.getPath();
-            return path.length ? get_1.default(rs, _this.getPath()) : rs;
+            return path.length ? get(rs, _this.getPath()) : rs;
         };
         this.mapState = function (fn) {
             if (fn === void 0) { fn = helpers_1.identity; }

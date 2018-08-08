@@ -1,8 +1,16 @@
-import get from "lodash/get";
 import { StandardAction, StandardActionPayload } from "../action";
 import { identity } from "./helpers";
 
 export const reducerSymbol = Symbol();
+function get(object, keys) {
+  keys = Array.isArray(keys) ? keys : keys.split(".");
+  object = object[keys[0]];
+  if (object && keys.length > 1) {
+    return get(object, keys.slice(1));
+  }
+  return object;
+}
+
 export function isReducer(reducer) {
   return reducer && reducer[reducerSymbol];
 }

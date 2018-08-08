@@ -51,4 +51,11 @@ describe("restate", () => {
     });
     expect(storeWithReducer.stores.nested.getPath()).toEqual(["reducerKey", "nested"]);
   });
+  it("should work with null reducer", () => {
+    const state = createState(null);
+
+    expect(state.reducer()).toEqual(null);
+    expect(state.reducer(null, {})).toEqual(null);
+    expect(state.reducer({}, {})).toEqual({});
+  });
 });

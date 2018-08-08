@@ -6,9 +6,16 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
     }
     return t;
 };
-import get from "lodash/get";
 import { identity } from "./helpers";
 export var reducerSymbol = Symbol();
+function get(object, keys) {
+    keys = Array.isArray(keys) ? keys : keys.split(".");
+    object = object[keys[0]];
+    if (object && keys.length > 1) {
+        return get(object, keys.slice(1));
+    }
+    return object;
+}
 export function isReducer(reducer) {
     return reducer && reducer[reducerSymbol];
 }
