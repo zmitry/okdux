@@ -64,6 +64,7 @@ export class BaseReducerBuilder<T> {
 
   reset = action => {
     this.on(action, state => this.initialState);
+    return this;
   };
 
   public reducer = <P>(state: T = this.initialState, action: StandardActionPayload<P>): T => {
