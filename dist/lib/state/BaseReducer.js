@@ -38,6 +38,7 @@ var BaseReducerBuilder = /** @class */ (function () {
         };
         this.reset = function (action) {
             _this.on(action, function (state) { return _this.initialState; });
+            return _this;
         };
         this.reducer = function (state, action) {
             if (state === void 0) { state = _this.initialState; }

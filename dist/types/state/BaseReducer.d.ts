@@ -13,7 +13,7 @@ export declare class BaseReducerBuilder<T> {
     on<E>(action: StandardAction<E>, handler: any): this;
     select: <R>(rs: R) => any;
     mapState: (fn?: <T>(d: T, ..._: any[]) => T) => (state: any, props: any) => any;
-    reset: (action: any) => void;
+    reset: (action: any) => this;
     reducer: <P>(state: T, action: StandardActionPayload<P>) => T;
     mixin: (fn: any) => any;
 }

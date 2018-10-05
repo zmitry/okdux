@@ -51,7 +51,7 @@ export class BaseReducerBuilder<T> {
 
   select = <R>(rs: R) => {
     if (typeof rs === "function") {
-      return this.mapState(rs);
+      return this.mapState(rs as any);
     }
 
     const path = this.getPath();

@@ -6,7 +6,7 @@ export interface IReducerBuilder<T> {
   select<RootState>(rootState: RootState): T;
   on<E>(event: StandardAction<E>, handler: (state: T, payload: E) => T): IReducerBuilder<T>;
   reset<E>(event: StandardAction<E>): IReducerBuilder<T>;
-  mixin<R>(fn: (A: IReducerBuilder<T>) => R): R;
+  mixin<R>(fn: (A: IReducerBuilder<T>) => R): R & IReducerBuilder<T>;
 }
 
 export type Unpacked<T> = T extends IReducerBuilder<infer U>
