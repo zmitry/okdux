@@ -81,5 +81,5 @@ export class BaseReducerBuilder<T> {
     return state;
   };
 
-  mixin = fn => ({ ...(this as object), ...fn(this) });
+  mixin = fn => Object.assign(this, fn(this));
 }

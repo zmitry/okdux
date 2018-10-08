@@ -1,11 +1,3 @@
-var __assign = (this && this.__assign) || Object.assign || function(t) {
-    for (var s, i = 1, n = arguments.length; i < n; i++) {
-        s = arguments[i];
-        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-            t[p] = s[p];
-    }
-    return t;
-};
 import { identity } from "./helpers";
 export var reducerSymbol = Symbol();
 function get(object, keys) {
@@ -53,7 +45,7 @@ var BaseReducerBuilder = /** @class */ (function () {
             }
             return state;
         };
-        this.mixin = function (fn) { return (__assign({}, _this, fn(_this))); };
+        this.mixin = function (fn) { return Object.assign(_this, fn(_this)); };
         if (typeof initialState === "undefined") {
             throw new Error("initial state should not be undefined");
         }
