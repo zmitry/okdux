@@ -1,4 +1,4 @@
-import { CombinedReducer, BaseReducerBuilder } from "./state";
+import { CombinedReducer, BaseReducerBuilder, getRootStateSymbol } from "./state";
 export function createState(initialState) {
     if (initialState === undefined) {
         throw new Error("initial state cannot be undefined");
@@ -20,7 +20,7 @@ export function createState(initialState) {
     else {
         state = new BaseReducerBuilder(initialState);
     }
-    state.use = function (dispatch) { return use(state, dispatch); };
+    state.use = function (d, gs) { return use(state, d, gs); };
     state.createStore = function (fn) {
         var store = fn(state.reducer, state);
         if (!store) {
@@ -45,12 +45,15 @@ function forEachAction(store, fn) {
         fn(store.handlers[item]);
     }
 }
-function use(store, dispatch) {
+function use(store, dispatch, getState) {
+    if (getState === void 0) { getState = null; }
     var setDispatch = function (data) {
         data.action.setDispatch(dispatch);
     };
     forEachAction(store, setDispatch);
+    store[getRootStateSymbol] = getState;
     forEachStore(store.stores, function (el) {
+        el[getRootStateSymbol] = getState;
         forEachAction(el, setDispatch);
     });
 }

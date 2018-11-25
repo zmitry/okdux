@@ -25,7 +25,7 @@ function createState(initialState) {
     else {
         state = new state_1.BaseReducerBuilder(initialState);
     }
-    state.use = function (dispatch) { return use(state, dispatch); };
+    state.use = function (d, gs) { return use(state, d, gs); };
     state.createStore = function (fn) {
         var store = fn(state.reducer, state);
         if (!store) {
@@ -51,12 +51,15 @@ function forEachAction(store, fn) {
         fn(store.handlers[item]);
     }
 }
-function use(store, dispatch) {
+function use(store, dispatch, getState) {
+    if (getState === void 0) { getState = null; }
     var setDispatch = function (data) {
         data.action.setDispatch(dispatch);
     };
     forEachAction(store, setDispatch);
+    store[state_1.getRootStateSymbol] = getState;
     forEachStore(store.stores, function (el) {
+        el[state_1.getRootStateSymbol] = getState;
         forEachAction(el, setDispatch);
     });
 }

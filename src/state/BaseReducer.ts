@@ -2,6 +2,8 @@ import { StandardAction, StandardActionPayload } from "../action";
 import { identity } from "./helpers";
 
 export const reducerSymbol = Symbol();
+export const getRootStateSymbol = Symbol();
+
 function get(object, keys) {
   keys = Array.isArray(keys) ? keys : keys.split(".");
   object = object[keys[0]];
@@ -18,6 +20,7 @@ export class BaseReducerBuilder<T> {
   public handlers = {};
   parent;
   path;
+  [getRootStateSymbol]: () => any = null;
   private [reducerSymbol] = {};
   constructor(public initialState: T) {
     if (typeof initialState === "undefined") {
@@ -38,7 +41,14 @@ export class BaseReducerBuilder<T> {
     }
   }
 
-  on<E>(action: StandardAction<E>, handler) {
+  getState = () => {
+    if (!this[getRootStateSymbol]) {
+      throw new Error("please set getState to root reducer");
+    }
+    return this.select(this[getRootStateSymbol]());
+  };
+
+  on = <E>(action: StandardAction<E>, handler) => {
     if (action === undefined || action === null || !action.getType) {
       throw new Error("action should be an action type, got " + action);
     }
@@ -47,7 +57,7 @@ export class BaseReducerBuilder<T> {
       action
     };
     return this;
-  }
+  };
 
   select = <R>(rs: R) => {
     if (typeof rs === "function") {
@@ -82,4 +92,5 @@ export class BaseReducerBuilder<T> {
   };
 
   mixin = fn => Object.assign(this, fn(this));
+  pipe = fn => fn(this);
 }

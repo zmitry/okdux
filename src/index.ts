@@ -1,4 +1,10 @@
-import { IReducerBuilder, CombinedReducer, BaseReducerBuilder, R } from "./state";
+import {
+  IReducerBuilder,
+  CombinedReducer,
+  BaseReducerBuilder,
+  R,
+  getRootStateSymbol
+} from "./state";
 
 export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
   if (initialState === undefined) {
@@ -22,7 +28,7 @@ export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
     state = new BaseReducerBuilder(initialState);
   }
 
-  state.use = dispatch => use(state, dispatch);
+  state.use = (d, gs) => use(state, d, gs);
   state.createStore = fn => {
     const store = fn(state.reducer, state);
     if (!store) {
@@ -51,12 +57,14 @@ function forEachAction(store, fn) {
   }
 }
 
-function use(store, dispatch) {
+function use(store, dispatch, getState = null) {
   const setDispatch = data => {
     data.action.setDispatch(dispatch);
   };
   forEachAction(store, setDispatch);
+  store[getRootStateSymbol] = getState;
   forEachStore(store.stores, el => {
+    el[getRootStateSymbol] = getState;
     forEachAction(el, setDispatch);
   });
 }

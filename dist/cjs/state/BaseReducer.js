@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var helpers_1 = require("./helpers");
 exports.reducerSymbol = Symbol();
+exports.getRootStateSymbol = Symbol();
 function get(object, keys) {
     keys = Array.isArray(keys) ? keys : keys.split(".");
     object = object[keys[0]];
@@ -19,7 +20,24 @@ var BaseReducerBuilder = /** @class */ (function () {
         var _this = this;
         this.initialState = initialState;
         this.handlers = {};
-        this[_a] = {};
+        this[_a] = null;
+        this[_b] = {};
+        this.getState = function () {
+            if (!_this[exports.getRootStateSymbol]) {
+                throw new Error("please set getState to root reducer");
+            }
+            return _this.select(_this[exports.getRootStateSymbol]());
+        };
+        this.on = function (action, handler) {
+            if (action === undefined || action === null || !action.getType) {
+                throw new Error("action should be an action type, got " + action);
+            }
+            _this.handlers[action.getType()] = {
+                handler: handler,
+                action: action
+            };
+            return _this;
+        };
         this.select = function (rs) {
             if (typeof rs === "function") {
                 return _this.mapState(rs);
@@ -49,6 +67,7 @@ var BaseReducerBuilder = /** @class */ (function () {
             return state;
         };
         this.mixin = function (fn) { return Object.assign(_this, fn(_this)); };
+        this.pipe = function (fn) { return fn(_this); };
         if (typeof initialState === "undefined") {
             throw new Error("initial state should not be undefined");
         }
@@ -65,19 +84,9 @@ var BaseReducerBuilder = /** @class */ (function () {
             return this.path ? [this.path] : [];
         }
     };
-    BaseReducerBuilder.prototype.on = function (action, handler) {
-        if (action === undefined || action === null || !action.getType) {
-            throw new Error("action should be an action type, got " + action);
-        }
-        this.handlers[action.getType()] = {
-            handler: handler,
-            action: action
-        };
-        return this;
-    };
     return BaseReducerBuilder;
 }());
-_a = exports.reducerSymbol;
+_a = exports.getRootStateSymbol, _b = exports.reducerSymbol;
 exports.BaseReducerBuilder = BaseReducerBuilder;
-var _a;
+var _a, _b;
 //# sourceMappingURL=BaseReducer.js.map

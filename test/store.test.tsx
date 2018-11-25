@@ -58,4 +58,14 @@ describe("restate", () => {
     expect(state.reducer(null, {})).toEqual(null);
     expect(state.reducer({}, {})).toEqual({});
   });
+  it("should work with get state", () => {
+    const state = createState(1);
+    const d = jest.fn();
+    const gt = jest.fn().mockImplementation(el => 2);
+    state.use(d, gt);
+
+    const s = state.getState();
+    expect(gt).toBeCalled();
+    expect(s).toBe(2);
+  });
 });
