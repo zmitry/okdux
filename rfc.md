@@ -1,86 +1,113 @@
+async api classes
+
+impl
+
 ```jsx
-const i = createState(1);
-const state = createState({
-  i
-});
-
-state.use(store.dispatch, store.getState, store.subscribe);
-
-i.subscribe(() => {});
-i.getState();
-state.getState();
-
-const stateSelector = createComputed(state, () => state);
-<stateSelector.Consumer selector={state => state.i} />;
-stateSelector.connect();
-
-const { from } = require("most");
-const asyncAction = createAsync("qwer");
-const cancel = createAsync("qwer2");
-
-const cancelStream = from(cancel);
-from(asyncAction)
-  .mergeMap(el => rxfetch().takeUntil(cancelStream))
-  .subscribe(el => {
-    asyncAction.success(el);
-  });
-```
-
-```js
-const effect = createEffect();
-
-const searchUsers = ({ request, cancel, success }) => (action$, state$) =>
-  request
-    .select(action$)
-    .map(toQuery)
-    .filter(whereNotEmpty)
-    .map(query =>
-      just()
-        .until(cancel.select($action))
-        .chain(_ =>
-          merge(
-            just(replaceQuery(query)),
-            fromPromise(fetch(getUsersQueryUrl(query)).then(response => response.json()))
-              .map(toItems)
-              .map(success.raw)
-          )
-        )
-    )
-    .switch();
-
-effect.useEpic(searchUsers);
-```
-
-```js
-import { routerReducer } from "router-store";
-
-const routerReducerEnhanced = (state, action) => {
-  const nextRouterState = routerReducer(state.router, action);
-  if (nextState === state) {
-    return state;
+function createAsyncApi(state, actionsDecl, { onDone, onError, onStart } = { }) {
+  const update = (state, payload) {
+    return Object.assign({}, state, ...payload);
   }
-  return {
-    router: nextRouterState,
-    history: state.history.concact(nextRouterState)
-  };
-};
+  const getState = ()=>state.getState()
+  const actions = {};
+  for (let actionKey in actionsDecl) {
+    const handler = actionsDecl[actionKey];
+    const applyPatches = createAction(Symbol('patch by '+actionKey));
+
+    state.on(applyPatches, update)
+    const act = (...args)=>{
+      let patches = [];
+      const patchState = (patch)=>{
+        patches.push(patch);
+      }
+      const api = { patchState, getState }
+
+      let promise = Promise.resolve().then(el=>{onStart()}).then((handler(api, ...args))
+      .then(()=>void 0)
+      if(onError){
+        promise = promise.catch(onError);
+      }
+      return promise.finally(()=>{
+        applyPatches(patches)
+        onDone && onDone(actionKey, args, patches);
+        patches = [];
+      })
+
+    }
+    actions[actionKey] = act;
+  }
+  return actions;
+}
 ```
 
-todo
+example with class
 
-1.  epics
-2.  reset
-3.  better computed
-4.  actions on store
-5.  render callback state
-6.  entity reducer
-7.  refactor typings
-8.  async inject
-
-```js
-import module from "some-module";
-
-function someMethod() {
-  module.call("ds");
+```tsx
+class EffectsApi extends AsyncApi<typeof State> {
+  async list(payload) {
+    const rules = await api.list();
+    return this.patchState({
+      list: rules
+    });
+  }
+  @NoHooks
+  async create(payload) {
+    const res = await api.put(payload);
+    return actions.addRule.raw(res);
+  }
+  async update(payload) {
+    const res = await api.patch(rule);
+    const resActions = this.delete(payload);
+    return [actions.updateItem(res), ...resActions];
+  }
+  async delete(payload) {
+    const res = await api.del(rule);
+    return [actions.deleteItem(res)];
+  }
+  onError(action, errror) {
+    notification.error({ message: error.message });
+  }
 }
+const effects = createAsyncApi(state, EffectsApi);
+```
+
+with objects
+
+```tsx
+const asyncApiMap = {
+  async list(ctx, payload) {
+    const rules = await api.list();
+    return ctx.patchState({
+      list: rules
+    });
+  },
+  async create(ctx, payload) {
+    const res = await api.put(payload);
+    return [actions.addRule.raw(res)];
+  },
+  async update(ctx, payload) {
+    const res = await api.patch(rule);
+    actions.updateItem(res);
+  },
+  delete(ctx, payload) {
+    const res = await api.del(rule);
+    actions.deleteItem(res);
+  }
+};
+
+const asyncApiHooks = {
+  onError(actionType, error) {
+    notification.error({ message: error.message });
+  },
+  onSuccess(actionType) {
+    notification.open({ message: getNotificationText(actionType) });
+  },
+  onStart(event, args) {
+    console.log("event, args: ", event, args);
+    startLoading(event);
+  },
+  onDone(event) {
+    stopLoading(event);
+  }
+};
+const effects = createAsyncApi(state, asyncApiMap, asyncApiHooks);
 ```

@@ -5,6 +5,7 @@ import {
   R,
   getRootStateSymbol
 } from "./state";
+import { create } from "domain";
 
 export function createState<T>(initialState: T): IReducerBuilder<R<T>> {
   if (initialState === undefined) {

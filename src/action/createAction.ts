@@ -1,4 +1,4 @@
-import { StandardAction, FunctionMap, CallFunctionMap, AsyncActions } from "./createAction.h";
+import { StandardAction, FunctionMap, CallFunctionMap } from "./createAction.h";
 
 const mutator = <T>(defaultValue: T) => <TP = T>(
   name: string | Symbol = Symbol()
@@ -28,12 +28,15 @@ const mutator = <T>(defaultValue: T) => <TP = T>(
 
 const createAction = mutator(null);
 
-function createAsyncAction<A, B, C>(name: string): AsyncActions<A, B, C> {
-  return {
-    request: createAction(name + "_REQUEST"),
-    success: createAction(name + "_SUCCESS"),
-    failure: createAction(name + "_FAILURE")
-  };
+function createAsyncAction<A, B, C>(name: string) {
+  return createActions(
+    {
+      failure: build.action<A>(),
+      success: build.action<B>(),
+      request: build.action<C>()
+    },
+    name + "_"
+  );
 }
 
 const build = {
@@ -59,6 +62,9 @@ function createActions<T extends FunctionMap<T>>(
     {} as CallFunctionMap<T>
   );
 }
+const t = createActions({
+  act: build.async()
+});
 
 const createEffects = createActions;
 export { createAction, build, createActions, createEffects };

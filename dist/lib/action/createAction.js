@@ -24,11 +24,11 @@ var mutator = function (defaultValue) { return function (name) {
 }; };
 var createAction = mutator(null);
 function createAsyncAction(name) {
-    return {
-        request: createAction(name + "_REQUEST"),
-        success: createAction(name + "_SUCCESS"),
-        failure: createAction(name + "_FAILURE")
-    };
+    return createActions({
+        failure: build.action(),
+        success: build.action(),
+        request: build.action()
+    }, name + "_");
 }
 var build = {
     plain: createAction,
@@ -47,6 +47,9 @@ function createActions(actions, prefix) {
         return acc;
     }, {});
 }
+var t = createActions({
+    act: build.async()
+});
 var createEffects = createActions;
 export { createAction, build, createActions, createEffects };
 //# sourceMappingURL=createAction.js.map

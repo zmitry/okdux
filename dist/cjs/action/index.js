@@ -4,4 +4,5 @@ function __export(m) {
 }
 Object.defineProperty(exports, "__esModule", { value: true });
 __export(require("./createAction"));
+__export(require("./apiFactory"));
 //# sourceMappingURL=index.js.map
