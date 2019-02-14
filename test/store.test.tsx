@@ -1,6 +1,6 @@
 import React from "react";
 import { createStore } from "redux";
-import { createState, createAction, StandardAction } from "../src";
+import { createState, createAction, StandardAction, createApi } from "../src";
 import Render from "react-test-renderer";
 let mockedData;
 let changedKeys;
@@ -67,5 +67,22 @@ describe("restate", () => {
     const s = state.getState();
     expect(gt).toBeCalled();
     expect(s).toBe(2);
+  });
+
+  it("should work with createApi", () => {
+    const state = createState(1);
+    const d = jest.fn();
+    const gt = jest.fn().mockImplementation(el => 2);
+    const api = createApi(state, {
+      increment(state, payload: number) {
+        return state + payload;
+      }
+    });
+    state.use(d, gt);
+
+    api.increment(5);
+    const s = state.getState();
+    expect(gt).toBeCalled();
+    expect(d.mock.calls[0][0].type).toBe(api.increment.getType());
   });
 });

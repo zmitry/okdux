@@ -56,6 +56,9 @@ function forEachAction(store, fn) {
   for (let item in store.handlers) {
     fn(store.handlers[item]);
   }
+  for (let item of Object.getOwnPropertySymbols(store.handlers)) {
+    fn(store.handlers[item]);
+  }
 }
 
 function use(store, dispatch, getState = null) {

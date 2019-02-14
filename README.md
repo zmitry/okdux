@@ -174,16 +174,18 @@ same as `state.on(action, ()=>initialValue)`
 
 ### createActions({ [string]: ActionFactory })
 
-example:s
+examples
 
 ```js
-import { build } from 'okdux'
-const actions = createActions({
-  inc: build.action<string>()
-})
+import { build, createState, createApi } from "okdux";
+const counter = createState(0);
 
-actions.inc // actions creator
-
-const state = createState(1);
-state.on(inc, s=>s+1)
+const actions = createApi(counter, {
+  increment(state, payload) {
+    return { ...state, payload };
+  },
+  decrement(state, payload) {
+    return { ...state, payload };
+  }
+});
 ```

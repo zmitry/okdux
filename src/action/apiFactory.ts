@@ -19,7 +19,10 @@ export function createApi<S, Model extends IStateApi<S, any>>(
 ): IApiActions<S, Model> & { update: (state: S, payload: Partial<S>) => S };
 
 export function createApi(state, actionsDecl) {
-  const actions = {};
+  const update = createAction(Symbol("update"));
+  state.on(update, (s, p) => ({ ...state, ...p }));
+  const actions = { update };
+
   for (let actionKey in actionsDecl) {
     const handler = actionsDecl[actionKey];
     const act = createAction(Symbol(actionKey));

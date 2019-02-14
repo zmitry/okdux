@@ -1,5 +1,3 @@
-import { createActions } from "./createAction";
-
 export type FunctionMap<T> = { [M in keyof T]: (...args: any[]) => any };
 export type CallFunctionMap<T extends FunctionMap<T>> = { [M in keyof T]: ReturnType<T[M]> };
 
