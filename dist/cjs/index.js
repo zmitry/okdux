@@ -1,4 +1,14 @@
 "use strict";
+var __values = (this && this.__values) || function (o) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
+    if (m) return m.call(o);
+    return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+};
 function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
@@ -50,6 +60,20 @@ function forEachAction(store, fn) {
     for (var item in store.handlers) {
         fn(store.handlers[item]);
     }
+    try {
+        for (var _a = __values(Object.getOwnPropertySymbols(store.handlers)), _b = _a.next(); !_b.done; _b = _a.next()) {
+            var item = _b.value;
+            fn(store.handlers[item]);
+        }
+    }
+    catch (e_1_1) { e_1 = { error: e_1_1 }; }
+    finally {
+        try {
+            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+        }
+        finally { if (e_1) throw e_1.error; }
+    }
+    var e_1, _c;
 }
 function use(store, dispatch, getState) {
     if (getState === void 0) { getState = null; }
