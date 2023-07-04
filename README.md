@@ -1,8 +1,4 @@
 # Okdux 👌
-
-[![CircleCI](https://circleci.com/gh/zhDmitry/restate.svg?style=svg)](https://circleci.com/gh/zhDmitry/okdux)
-[![NPM Downloads](https://img.shields.io/npm/dm/okdux.svg?style=flat)](https://www.npmjs.com/package/okdux)
-
 This lib was created for reducing pain from redux boilerplate.
 
 ---
